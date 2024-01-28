@@ -10,3 +10,5 @@ settings.json
 /.idea
 /__pycache__
 config/
+
+.DS_Store
