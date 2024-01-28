@@ -15,28 +15,36 @@ class Settings:
     def __init__(self):
         self.loaded_settings = {}
         # Does settings.json file exist?
-        if os.path.exists('settings.json'):
+        if os.path.exists('/config/settings.json'):
             # Load up the settings
-            with open('settings.json') as file:
+            with open('/config/settings.json') as file:
                 self.loaded_settings = json.load(file)
                 print('Settings Loaded.')
         else:
-            # Lets create a new settings file
-            self.loaded_settings['includeShowDesc'] = True
-            self.loaded_settings['saveFormat'] = '{show}-S{season}E{episode}-{desc}'
-            self.loaded_settings['episodePadding'] = 2
-            self.loaded_settings['seasonPadding'] = 2
-            self.loaded_settings['defaultOutputLocation'] = False
-            self.loaded_settings['saveDownloadLocation'] = True
-            self.loaded_settings['useKnownDownloadLocation'] = True
-            self.loaded_settings['checkIfFileIsAlreadyDownloaded'] = True
-            self.loaded_settings['downloadsDatabaseLocation'] = ".{os_path}{file_name}".format(os_path=os.sep, file_name='database.p')
-            self.loaded_settings['allowToResumeDownloads'] = True
-            self.loaded_settings['checkForUpdates'] = True
-            
-            file = open('settings.json', 'w')
-            file.write(json.dumps(self.loaded_settings, indent=4, sort_keys=True))
-            file.close()
+            # Create the 'config' directory if it doesn't exist
+            os.makedirs('config', exist_ok=True)
+
+            # Default settings
+            default_settings = {
+                'includeShowDesc': True,
+                'saveFormat': '{show}-S{season}E{episode}-{desc}',
+                'episodePadding': 2,
+                'seasonPadding': 2,
+                'defaultOutputLocation': False,
+                'saveDownloadLocation': True,
+                'useKnownDownloadLocation': True,
+                'checkIfFileIsAlreadyDownloaded': True,
+                'downloadsDatabaseLocation': f"config{os.path.sep}database.p",
+                'allowToResumeDownloads': True,
+                'checkForUpdates': True,
+            }
+
+            self.loaded_settings.update(default_settings)
+
+            # Write settings to 'config/settings.json'
+            with open('config/settings.json', 'w') as file:
+                json.dump(self.loaded_settings, file, indent=4, sort_keys=True)
+
             print('Settings have been created!')
 
     def get_setting(self, setting_name):
