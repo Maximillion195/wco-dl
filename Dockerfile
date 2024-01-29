@@ -17,19 +17,15 @@ FROM python:3.8-slim
 WORKDIR /app
 # COPY --from=node-builder /usr/local /usr/local
 COPY --from=python-builder /app /app
-COPY --from=node-builder /app/server /app/server
+COPY --from=node-builder /app/server/dist /app/server
 
 # Install Node.js and npm
 RUN apt-get update \
-    && apt-get install -y nodejs \
-    && apt-get install -y npm
-
-# Install Yarn
-RUN npm install -g yarn
+    && apt-get install -y nodejs
 
 EXPOSE 3000/tcp
 
 WORKDIR /app/server
 
 # Run the application
-CMD ["yarn", "start:dev"]
+CMD ["node", "dist/main.js"]
