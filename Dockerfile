@@ -22,8 +22,6 @@ RUN yarn build
 # Stage 3: Final image with Python, Node.js, and Yarn
 FROM python:3.8-slim
 
-# Create a non-root user with the specified UID and GID
-RUN groupadd -g ${PGID} users && useradd -u ${PUID} -g ${PGID} -m -s /bin/bash docker
 WORKDIR /app
 COPY --from=python-builder /app /app
 
