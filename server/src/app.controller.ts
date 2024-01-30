@@ -6,6 +6,9 @@ const path = require('path');
 const axios = require('axios');
 const cheerio = require('cheerio');
 
+const isProd = process.env.NODE_ENV === 'production';
+const outputBase = isProd ? "/data/torrents/completed" : "./output";
+
 @Controller()
 export class AppController {
   constructor(private readonly appService: AppService) {}
@@ -31,9 +34,6 @@ export class AppController {
     
       const $ = cheerio.load(response.data.solution.response);
 
-      // Find all 'a' tags within the 'top-ranking-table' class
-      // const aTags = $('.ddmcc');
-
       // Array to store inner HTML of hrefs starting with "/anime"
       const animePaths = [];
 
@@ -52,18 +52,14 @@ export class AppController {
     
   @Post("download-anime")
   getShow(@Body() body: CreateShow) {
-    console.log(`Downloading: ${body.name}`)
-
-    // Replace 'your_python_script.py' with the actual name of your Python script
     const pythonScript = path.resolve(__dirname, '../../__main__.py');
-    console.log(__dirname)
 
     const inputUrl = `-i https://www.wcostream.tv/anime/${body.name}`;
     const seasonOption = body.season ? `-se ${body.season}` : '';
     const episodeOption = body.episode ? `-epr ${body.episode}` : '';
     const qualityOption = '-hd';
     const threadsAmount = '-t 4';
-    const outputOption = `-o "/data/torrents/completed/${body.name}/"`;
+    const outputOption = `-o "${outputBase}/${body.name}/"`;
 
     const pythonCommand = `python ${pythonScript} ${inputUrl} ${seasonOption} ${episodeOption} ${qualityOption} ${outputOption} ${threadsAmount}`;
 
@@ -73,36 +69,44 @@ export class AppController {
 
     // Capture and log the stdout
     child.stdout.on('data', (data) => {  
-      console.log(`Output: ${data}`);
+      console.log(`${data}`);
     });
 
     // Listen for the exit event
     child.on('exit', (code) => {
-      const apiUrl = 'http://192.168.1.48:8989/api/v3/manualimport';
-
-      fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Api-Key': "70f3774d71c647dba9dee2ece98157a1"
-        },
-      })
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then(data => {
-          console.log('Manual import initiated successfully:', data);
-        })
-        .catch(error => {
-          console.error('Error initiating manual import:', error.message);
-        });
-
-      console.log(`Python script exited with code ${code}`);
+      if (isProd) {
+        triggerSonarImport();
+      }
     });
 
     // return this.appService.getHello();
   }
+}
+
+function triggerSonarImport() {
+  const apiUrl = 'http://192.168.1.48:8989/api/v3/command';
+
+  fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Api-Key': "70f3774d71c647dba9dee2ece98157a1"
+    },
+    body: JSON.stringify({
+      name: 'DownloadedEpisodesScan',
+      path: `${outputBase}/`
+    })
+  })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      console.log('Manual import initiated successfully:', data);
+    })
+    .catch(error => {
+      console.error('Error initiating manual import:', error.message);
+    });
 }
