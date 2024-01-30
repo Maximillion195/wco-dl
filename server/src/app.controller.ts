@@ -105,7 +105,7 @@ function triggerSonarImport() {
       return response.json();
     })
     .then(data => {
-      console.log('Manual import initiated successfully:', data);
+      console.log('Manual import initiated successfully: ', data.status);
     })
     .catch(error => {
       console.error('Error initiating manual import:', error.message);
