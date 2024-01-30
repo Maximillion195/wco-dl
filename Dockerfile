@@ -40,8 +40,8 @@ RUN apt-get update \
     && apt-get install -y nodejs
 
 # Change ownership of the application files to the non-root user
-RUN chown -R ${PUID}:${PGID} /app
-RUN chmod -R u=rwX,go=rX /app
+RUN groupadd -g ${PGID} -o users
+RUN useradd -m -u ${PUID} -g ${PGID} -o -s /bin/bash docker
 
 # Switch to the non-root user
 USER docker
