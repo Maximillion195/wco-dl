@@ -40,7 +40,7 @@ ARG PUID=1000
 ARG PGID=1000
 
 # Change ownership of the application files to the non-root user
-# RUN groupadd -g ${PGID} -o users
+RUN groupadd -g ${PGID} -o user
 RUN useradd -m -u ${PUID} -g ${PGID} -o -s /bin/bash docker
 
 # Switch to the non-root user
