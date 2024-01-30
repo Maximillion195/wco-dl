@@ -68,13 +68,28 @@ export class AppController {
     // Use spawn for real-time output
     const child = spawn(pythonCommand, { shell: true, encoding: 'utf-8' });
 
+    // Set a timeout (5 minutes = 300,000 milliseconds)
+    const timeout = 150000;
+    let timeoutId;
+
+    const handleTimeout = () => {
+      console.log('Python command execution timed out. Killing the process.');
+      child.kill();
+    };
+
+    timeoutId = setTimeout(handleTimeout, timeout);
+
     // Capture and log the stdout
     child.stdout.on('data', (data) => {  
       console.log(`${data}`);
+      // Reset the timeout on receiving data
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(handleTimeout, timeout);
     });
 
     // Listen for the exit event
     child.on('exit', (code) => {
+      clearTimeout(timeoutId); // Clear the timeout if the process exits before the timeout
       if (isProd) {
         triggerSonarImport();
       }
