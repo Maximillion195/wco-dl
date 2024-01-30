@@ -98,6 +98,9 @@ class Downloader(object):
                     if (self.logger == 'True'):
                         print('Error: {}'.format(e), end='\n\n')
                     return
+                finally:
+                    # Set file permissions after writing the file
+                    os.chmod(self.file_path, 0o664)  # 0o644 corresponds to -rw-rw-r--
                 return
             else:
                 dlr = self.sess.get(url, stream=True, headers=self.header)  # Downloading the content using python.
@@ -115,7 +118,9 @@ class Downloader(object):
                     if (self.logger == 'True'):
                         print('Error: {}'.format(e), end='\n\n')
                     return False
-
+                finally:
+                    # Set file permissions after writing the file
+                    os.chmod(self.file_path, 0o664)  # 0o644 corresponds to -rw-rw-r--
             if os.path.getsize(self.file_path) == 0:
                 # print("[wco-dl] - Download for {0} did not complete, please try again.\n".format(self.file_name))
                 # Upon failure of download append the episode name, file_name, to a text file in the same directory

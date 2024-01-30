@@ -92,7 +92,7 @@ export class AppController {
       console.log("Python script finished")
       clearTimeout(timeoutId); // Clear the timeout if the process exits before the timeout
       if (isProd) {
-        triggerSonarImport();
+        triggerSonarImport(`${outputBase}/${body.name}/`);
       }
     });
 
@@ -100,7 +100,7 @@ export class AppController {
   }
 }
 
-function triggerSonarImport() {
+function triggerSonarImport(folderPath) {
   const apiUrl = 'http://192.168.1.48:8989/api/v3/command';
 
   fetch(apiUrl, {
@@ -111,7 +111,7 @@ function triggerSonarImport() {
     },
     body: JSON.stringify({
       name: 'DownloadedEpisodesScan',
-      path: `${outputBase}/`
+      path: folderPath,
     })
   })
     .then(response => {
