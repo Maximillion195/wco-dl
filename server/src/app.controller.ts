@@ -97,7 +97,7 @@ export class AppController {
         const uid = process.env.PUID
         const gid = process.env.PGID
 
-        await addFilePermissions(folderPath, '644', uid, gid)
+        await addFilePermissions(folderPath, '775', uid, gid)
         await triggerSonarImport(folderPath);
       }
     });
