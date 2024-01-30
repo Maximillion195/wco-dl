@@ -1,6 +1,8 @@
 # Set environment variables for UID and GID
 ARG PUID=1000
 ARG PGID=1000
+ENV PUID=${PUID}
+ENV PGID=${PGID}
 
 # Stage 1: Build Python dependencies
 FROM python:3.8-slim as python-builder
