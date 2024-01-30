@@ -67,12 +67,18 @@ export class AppController {
 
     const pythonCommand = `python ${pythonScript} ${inputUrl} ${seasonOption} ${episodeOption} ${qualityOption} ${outputOption} ${threadsAmount}`;
 
+    console.log(pythonCommand)
     // Use spawn for real-time output
     const child = spawn(pythonCommand, { shell: true });
 
     // Capture and log the stdout
     child.stdout.on('data', (data) => {  
-      const apiUrl = 'http://192.168.1.48:8989/api/manualimport';
+      console.log(`Output: ${data}`);
+    });
+
+    // Listen for the exit event
+    child.on('exit', (code) => {
+      const apiUrl = 'http://192.168.1.48:8989/api/v3/manualimport';
 
       fetch(apiUrl, {
         method: 'POST',
@@ -94,11 +100,6 @@ export class AppController {
           console.error('Error initiating manual import:', error.message);
         });
 
-      console.log(`Output: ${data}`);
-    });
-
-    // Listen for the exit event
-    child.on('exit', (code) => {
       console.log(`Python script exited with code ${code}`);
     });
 
