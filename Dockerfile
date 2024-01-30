@@ -16,8 +16,15 @@ RUN yarn build
 # Stage 3: Final image with Python, Node.js, and Yarn
 FROM python:3.8-slim
 WORKDIR /app
-# COPY --from=node-builder /usr/local /usr/local
 COPY --from=python-builder /app /app
+
+# Set NODE_ENV to production
+ENV NODE_ENV production
+
+# Explicitly copy the python dependancies from Python builder
+COPY --from=python-builder /usr/local/lib/python3.8/site-packages/ /usr/local/lib/python3.8/site-packages/
+
+# Should only need to copy the dist files but it errors?
 COPY --from=node-builder /app/server /app/server
 COPY --from=node-builder /app/server/dist /app/server/dist
 
