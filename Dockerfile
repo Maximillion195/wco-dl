@@ -35,17 +35,6 @@ COPY --from=node-builder /app/server/dist /app/server/dist
 RUN apt-get update \
     && apt-get install -y nodejs
 
-# Set environment variables for UID and GID
-ARG PUID=1000
-ARG PGID=1000
-
-# Change ownership of the application files to the non-root user
-RUN groupadd -g ${PGID} -o user
-RUN useradd -m -u ${PUID} -g ${PGID} -o -s /bin/bash docker
-
-# Switch to the non-root user
-USER docker
-
 EXPOSE 3000/tcp
 
 WORKDIR /app/server
