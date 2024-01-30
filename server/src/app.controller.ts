@@ -113,8 +113,10 @@ async function addFilePermissions(folderPath, permissions = '644', uid, gid) {
   const user = uid;
   const group = gid;
 
+  const bashScript = path.resolve(__dirname, 'change-permissions.sh');
+
   // Command to execute the shell script
-  const command = `bash change-permissions.sh ${directoryPath} ${filePermissions} ${user} ${group}`;
+  const command = `bash ${bashScript} ${directoryPath} ${filePermissions} ${user} ${group}`;
 
   // Execute the command
   exec(command, (error, stdout, stderr) => {
