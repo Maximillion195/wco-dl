@@ -1,5 +1,10 @@
+# Set environment variables for UID and GID
+ARG PUID
+ARG PGID
+
 # Stage 1: Build Python dependencies
 FROM python:3.8-slim as python-builder
+
 WORKDIR /app
 COPY . .
 RUN pip install --no-cache-dir -r requirements.txt
@@ -7,6 +12,7 @@ RUN chmod +x /app/__main__.py
 
 # Stage 2: Build Node.js and Yarn dependencies
 FROM node:21-alpine3.18 as node-builder
+
 WORKDIR /app
 COPY --from=python-builder /app /app
 WORKDIR /app/server
@@ -15,6 +21,9 @@ RUN yarn build
 
 # Stage 3: Final image with Python, Node.js, and Yarn
 FROM python:3.8-slim
+
+# Create a non-root user with the specified UID and GID
+RUN groupadd -g ${PGID} users && useradd -u ${PUID} -g ${PGID} -m -s /bin/bash docker
 WORKDIR /app
 COPY --from=python-builder /app /app
 
@@ -31,6 +40,13 @@ COPY --from=node-builder /app/server/dist /app/server/dist
 # Install Node.js and npm
 RUN apt-get update \
     && apt-get install -y nodejs
+
+# Change ownership of the application files to the non-root user
+RUN chown -R docker:users /app
+RUN chmod -R u=rwX,go=rX /app
+
+# Switch to the non-root user
+USER docker
 
 EXPOSE 3000/tcp
 
