@@ -18,6 +18,7 @@ FROM python:3.8-slim
 WORKDIR /app
 # COPY --from=node-builder /usr/local /usr/local
 COPY --from=python-builder /app /app
+COPY --from=node-builder /app/server /app/server
 COPY --from=node-builder /app/server/dist /app/server/dist
 
 # Install Node.js and npm
