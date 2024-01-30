@@ -5,6 +5,7 @@ const { spawn } = require('child_process');
 const path = require('path');
 const axios = require('axios');
 const cheerio = require('cheerio');
+const { exec } = require('child_process');
 
 const isProd = process.env.NODE_ENV === 'production';
 const outputBase = isProd ? "/data/torrents/completed" : "./output";
@@ -88,11 +89,16 @@ export class AppController {
     });
 
     // Listen for the exit event
-    child.on('exit', (code) => {
+    child.on('exit', async (code) => {
       console.log("Python script finished")
       clearTimeout(timeoutId); // Clear the timeout if the process exits before the timeout
       if (isProd) {
-        triggerSonarImport(`${outputBase}/${body.name}/`);
+        const folderPath = `${outputBase}/${body.name}/`;
+        const uid = process.env.PUID
+        const gid = process.env.PGID
+
+        await addFilePermissions(folderPath, '644', uid, gid)
+        await triggerSonarImport(folderPath);
       }
     });
 
@@ -100,7 +106,33 @@ export class AppController {
   }
 }
 
-function triggerSonarImport(folderPath) {
+async function addFilePermissions(folderPath, permissions = '644', uid, gid) {
+  // Arguments for the shell script
+  const directoryPath = folderPath;
+  const filePermissions = permissions;
+  const user = uid;
+  const group = gid;
+
+  // Command to execute the shell script
+  const command = `bash change-permissions.sh ${directoryPath} ${filePermissions} ${user} ${group}`;
+
+  // Execute the command
+  exec(command, (error, stdout, stderr) => {
+    if (error) {
+      console.error(`Error: ${error.message}`);
+      return;
+    }
+
+    if (stderr) {
+      console.error(`stderr: ${stderr}`);
+      return;
+    }
+
+    console.log(`stdout: ${stdout}`);
+  });
+}
+
+async function triggerSonarImport(folderPath) {
   const apiUrl = 'http://192.168.1.48:8989/api/v3/command';
 
   fetch(apiUrl, {
