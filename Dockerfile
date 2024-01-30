@@ -11,6 +11,7 @@ WORKDIR /app
 COPY --from=python-builder /app /app
 WORKDIR /app/server
 RUN yarn install
+RUN yarn build
 
 # Stage 3: Final image with Python, Node.js, and Yarn
 FROM python:3.8-slim
