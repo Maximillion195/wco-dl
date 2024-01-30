@@ -9,6 +9,9 @@ __email__ = "epicunknown@gmail.com"
 import os
 import json
 
+# Get UID and GID from environment variables
+PUID = int(os.environ.get("PUID", 1000))  # Use a default value if not set
+PGID = int(os.environ.get("PGID", 1000))  # Use a default value if not set
 
 class Settings:
 
@@ -22,7 +25,9 @@ class Settings:
                 print('Settings Loaded.')
         else:
             # Create the 'config' directory if it doesn't exist
-            os.makedirs('config', exist_ok=True)
+            directory_path = 'config'
+            os.makedirs(directory_path, exist_ok=True)
+            os.chown(directory_path, PUID, PGID)
 
             # Default settings
             default_settings = {
