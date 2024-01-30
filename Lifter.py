@@ -75,12 +75,9 @@ class Lifter(object):
             output_directory = self.output.translate(str.maketrans({'\\': os.sep, '/': os.sep}))
         if not os.path.exists(self.output):
             if not os.path.exists("Output"):
-                directory_path = 'Output'
-                os.makedirs(directory_path)
-                os.chown(directory_path, os.getuid(), os.getgid())
+                os.makedirs("Output")
             if not os.path.exists(output_directory):
                 os.makedirs(output_directory)
-                os.chown(output_directory, os.getuid(), os.getgid())
         else:
             output_directory = self.output.translate(str.maketrans({'\\': os.sep, '/': os.sep}))
         return output_directory

@@ -9,9 +9,6 @@ __email__ = "epicunknown@gmail.com"
 import os
 import json
 
-print(f"UID: {os.getuid()}")
-print(f"GID: {os.getgid()}")
-
 class Settings:
 
     def __init__(self):
