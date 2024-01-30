@@ -58,7 +58,7 @@ export class AppController {
     const seasonOption = body.season ? `-se ${body.season}` : '';
     const episodeOption = body.episode ? `-epr ${body.episode}` : '';
     const qualityOption = '-hd';
-    const threadsAmount = '-t 1';
+    const threadsAmount = '-t 2';
     const outputOption = `-o "${outputBase}/${body.name}/"`;
 
     const pythonCommand = `python ${pythonScript} ${inputUrl} ${seasonOption} ${episodeOption} ${qualityOption} ${outputOption} ${threadsAmount}`;
@@ -66,7 +66,7 @@ export class AppController {
     console.log(pythonCommand)
     
     // Use spawn for real-time output
-    const child = spawn(pythonCommand, { shell: true, encoding: 'utf-8' });
+    const child = spawn(pythonCommand, { shell: true, stdio: ['inherit', 'pipe', 'inherit'] });
 
     // Set a timeout (5 minutes = 300,000 milliseconds)
     const timeout = 150000;
@@ -80,8 +80,8 @@ export class AppController {
     timeoutId = setTimeout(handleTimeout, timeout);
 
     // Capture and log the stdout
-    child.stdout.on('data', (data) => {  
-      console.log(`${data}`);
+    child.stdout.on('data', (data) => {
+      process.stdout.write(data.toString()); // Write data to the console without adding a newline
       // Reset the timeout on receiving data
       clearTimeout(timeoutId);
       timeoutId = setTimeout(handleTimeout, timeout);
@@ -89,6 +89,7 @@ export class AppController {
 
     // Listen for the exit event
     child.on('exit', (code) => {
+      console.log("Python script finished")
       clearTimeout(timeoutId); // Clear the timeout if the process exits before the timeout
       if (isProd) {
         triggerSonarImport();
