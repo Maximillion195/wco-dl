@@ -28,7 +28,7 @@ ENV NODE_ENV production
 COPY --from=python-builder /usr/local/lib/python3.8/site-packages/ /usr/local/lib/python3.8/site-packages/
 
 # Should only need to copy the dist files but it errors?
-COPY --from=node-builder /app/server /app/server
+COPY --from=node-builder /app/server/node_modules /app/server/node_modules
 COPY --from=node-builder /app/server/dist /app/server/dist
 
 # Install Node.js and npm
