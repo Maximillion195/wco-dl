@@ -58,14 +58,15 @@ export class AppController {
     const seasonOption = body.season ? `-se ${body.season}` : '';
     const episodeOption = body.episode ? `-epr ${body.episode}` : '';
     const qualityOption = '-hd';
-    const threadsAmount = '-t 4';
+    const threadsAmount = '-t 1';
     const outputOption = `-o "${outputBase}/${body.name}/"`;
 
     const pythonCommand = `python ${pythonScript} ${inputUrl} ${seasonOption} ${episodeOption} ${qualityOption} ${outputOption} ${threadsAmount}`;
 
     console.log(pythonCommand)
+    
     // Use spawn for real-time output
-    const child = spawn(pythonCommand, { shell: true });
+    const child = spawn(pythonCommand, { shell: true, encoding: 'utf-8' });
 
     // Capture and log the stdout
     child.stdout.on('data', (data) => {  
