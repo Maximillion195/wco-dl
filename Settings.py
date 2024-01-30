@@ -13,6 +13,12 @@ import json
 PUID = int(os.environ.get("PUID", 1000))  # Use a default value if not set
 PGID = int(os.environ.get("PGID", 1000))  # Use a default value if not set
 
+print(f"UID: {os.getuid()}")
+print(f"GID: {os.getgid()}")
+
+print(f"HOST UID: {PGID}")
+print(f"HOST GID: {PGID}")
+
 class Settings:
 
     def __init__(self):
