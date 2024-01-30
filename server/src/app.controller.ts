@@ -52,7 +52,7 @@ export class AppController {
   }
     
   @Post("download-anime")
-  getShow(@Body() body: CreateShow) {
+  async getShow(@Body() body: CreateShow) {
     const pythonScript = path.resolve(__dirname, '../../__main__.py');
 
     const inputUrl = `-i https://www.wcostream.tv/anime/${body.name}`;
@@ -97,7 +97,10 @@ export class AppController {
         const uid = process.env.PUID
         const gid = process.env.PGID
 
-        await addFilePermissions(folderPath, '775', uid, gid)
+        await new Promise((resolve) => {
+          addFilePermissions(folderPath, '775', uid, gid, resolve);
+        });
+
         await triggerSonarImport(folderPath);
       }
     });
@@ -106,7 +109,7 @@ export class AppController {
   }
 }
 
-async function addFilePermissions(folderPath, permissions = '644', uid, gid) {
+async function addFilePermissions(folderPath, permissions = '644', uid, gid, resolve) {
   // Arguments for the shell script
   const directoryPath = folderPath;
   const filePermissions = permissions;
@@ -131,6 +134,7 @@ async function addFilePermissions(folderPath, permissions = '644', uid, gid) {
     }
 
     console.log(`stdout: ${stdout}`);
+    resolve(); // Resolve the Promise when the command completes
   });
 }
 
