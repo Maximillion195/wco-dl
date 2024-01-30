@@ -19,3 +19,8 @@ export class CreateShow {
 	@ApiProperty({ required: false, default: true, example: "false" })
 	newest: boolean = false;
 }
+
+export class ProcessShow {
+	@ApiProperty({ required: true })
+	name: string;
+}

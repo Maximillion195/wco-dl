@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { AppService } from './app.service';
-import { CreateShow } from './show.dto';
+import { CreateShow, ProcessShow } from './dto/all.dto';
 const { spawn } = require('child_process');
 const path = require('path');
 const axios = require('axios');
@@ -107,9 +107,24 @@ export class AppController {
 
     // return this.appService.getHello();
   }
+
+  @Post("process-anime")
+  async processShow(@Body() body: ProcessShow) {
+    if (isProd) {
+      const folderPath = `${outputBase}/${body.name}/`;
+      const uid = process.env.PUID
+      const gid = process.env.PGID
+
+      await new Promise((resolve) => {
+        addFilePermissions(folderPath, '775', uid, gid, resolve);
+      });
+
+      await triggerSonarImport(folderPath);
+    }
+  }
 }
 
-async function addFilePermissions(folderPath, permissions = '644', uid, gid, resolve) {
+async function addFilePermissions(folderPath, permissions = '755', uid, gid, resolve) {
   // Arguments for the shell script
   const directoryPath = folderPath;
   const filePermissions = permissions;
