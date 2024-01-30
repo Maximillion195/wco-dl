@@ -6,6 +6,10 @@ from cfscrape import create_scraper
 from requests import session
 from tqdm import tqdm
 
+# Get UID and GID from environment variables
+PUID = int(os.environ.get("PUID", 1000))  # Use a default value if not set
+PGID = int(os.environ.get("PGID", 1000))  # Use a default value if not set
+
 class Downloader(object):
     def __init__(self, logger, download_url, backup_url, hidden_url, output, header, user_agent, show_info, settings, quiet):
         self.sess = session()
