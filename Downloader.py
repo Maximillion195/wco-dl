@@ -6,10 +6,6 @@ from cfscrape import create_scraper
 from requests import session
 from tqdm import tqdm
 
-# Get UID and GID from environment variables
-PUID = int(os.environ.get("PUID", 1000))  # Use a default value if not set
-PGID = int(os.environ.get("PGID", 1000))  # Use a default value if not set
-
 class Downloader(object):
     def __init__(self, logger, download_url, backup_url, hidden_url, output, header, user_agent, show_info, settings, quiet):
         self.sess = session()
@@ -105,7 +101,7 @@ class Downloader(object):
                 finally:
                     # Set file permissions after writing the file
                     os.chmod(self.file_path, 0o664)  # 0o644 corresponds to -rw-rw-r--
-                    os.chown(self.file_path, PUID, PGID)
+                    os.chown(self.file_path, os.getuid(), os.getgid())
                 return
             else:
                 dlr = self.sess.get(url, stream=True, headers=self.header)  # Downloading the content using python.
@@ -126,7 +122,7 @@ class Downloader(object):
                 finally:
                     # Set file permissions after writing the file
                     os.chmod(self.file_path, 0o664)  # 0o644 corresponds to -rw-rw-r--
-                    os.chown(self.file_path, PUID, PGID)
+                    os.chown(self.file_path, os.getuid(), os.getgid())
             if os.path.getsize(self.file_path) == 0:
                 # print("[wco-dl] - Download for {0} did not complete, please try again.\n".format(self.file_name))
                 # Upon failure of download append the episode name, file_name, to a text file in the same directory

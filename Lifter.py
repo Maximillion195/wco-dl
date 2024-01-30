@@ -14,10 +14,6 @@ from Process import ProcessParallel
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# Get UID and GID from environment variables
-PUID = int(os.environ.get("PUID", 1000))  # Use a default value if not set
-PGID = int(os.environ.get("PGID", 1000))  # Use a default value if not set
-
 # TODO: Make it track missed episodes and retry when done
 
 class Lifter(object):
@@ -81,10 +77,10 @@ class Lifter(object):
             if not os.path.exists("Output"):
                 directory_path = 'Output'
                 os.makedirs(directory_path)
-                os.chown(directory_path, PUID, PGID)
+                os.chown(directory_path, os.getuid(), os.getgid())
             if not os.path.exists(output_directory):
                 os.makedirs(output_directory)
-                os.chown(output_directory, PUID, PGID)
+                os.chown(output_directory, os.getuid(), os.getgid())
         else:
             output_directory = self.output.translate(str.maketrans({'\\': os.sep, '/': os.sep}))
         return output_directory
