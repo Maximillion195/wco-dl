@@ -141,7 +141,7 @@
 		}
 
 		function handleDownloadButtonClick(selectedAnime) {
-			const apiUrl = `http://http://192.168.1.48:3000/download-anime`;
+			const apiUrl = `http://192.168.1.48:3000/download-anime`;
 
 			// Use the selected anime to make an API request
 			fetch(apiUrl, {
@@ -149,22 +149,22 @@
 				headers: {
 					'Content-Type': 'application/json',
 				},
-				body: JSON.stringify({ anime: selectedAnime }),
+				body: JSON.stringify({ 
+					anime: selectedAnime
+				 }),
 			})
 				.then(response => response.json())
 				.then(data => {
-					console.log(`API Response for Button ${buttonId}:`, data);
+					console.log(`API Response for ${selectedAnime}:`, data);
 				})
 				.catch(error => {
-					console.error(`Error making API request for Button ${buttonId}:`, error);
+					console.error(`Error making API request for ${selectedAnime}:`, error);
 				});
-
-			// Close the modal after making the API request
-			closeModal();
+			$.modal.close();
 		}
 
 		function handleProcessButtonClick(selectedAnime) {
-			const apiUrl = `http://http://192.168.1.48:3000/process-anime`;
+			const apiUrl = `http://192.168.1.48:3000/process-anime`;
 
 			// Use the selected anime to make an API request
 			fetch(apiUrl, {
@@ -176,14 +176,14 @@
 			})
 				.then(response => response.json())
 				.then(data => {
-					console.log(`API Response for Button ${buttonId}:`, data);
+					console.log(`API Response for ${selectedAnime}:`, data);
 				})
 				.catch(error => {
-					console.error(`Error making API request for Button ${buttonId}:`, error);
+					console.error(`Error making API request for ${selectedAnime}:`, error);
 				});
 
 			// Close the modal after making the API request
-			closeModal();
+			$.modal.close();
 		}
 	</script>
 	<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
