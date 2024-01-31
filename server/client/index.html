@@ -150,7 +150,7 @@
 					'Content-Type': 'application/json',
 				},
 				body: JSON.stringify({ 
-					anime: selectedAnime
+					name: selectedAnime
 				 }),
 			})
 				.then(response => response.json())
@@ -172,7 +172,7 @@
 				headers: {
 					'Content-Type': 'application/json',
 				},
-				body: JSON.stringify({ anime: selectedAnime }),
+				body: JSON.stringify({ name: selectedAnime }),
 			})
 				.then(response => response.json())
 				.then(data => {
