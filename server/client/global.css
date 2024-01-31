@@ -157,9 +157,22 @@ a:hover {
     text-decoration: underline;
 }
 
-/* Responsive styles */
-@media (max-width: 600px) {
+@media (max-width: 650px) {
     main {
-        padding: 10px;
+        padding: 20px;
+		margin-top: 30px;
     }
+
+	.form {
+		min-width: auto;
+		width: 100%;
+	}
+
+	#list {
+		margin-top: 20px;
+	}
+
+	.search-container input {
+    	max-width: 100%;
+	}
 }

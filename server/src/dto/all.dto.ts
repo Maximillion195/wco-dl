@@ -7,7 +7,7 @@ import { ApiProperty } from "@nestjs/swagger";
 
 
 export class CreateShow {
-	@ApiProperty()
+	@ApiProperty({ required: true })
 	name: string;
 
 	@ApiProperty({ required: false })

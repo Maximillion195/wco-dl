@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseInterceptors, Inject } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseInterceptors, Inject, NotFoundException } from '@nestjs/common';
 import { AppService } from './app.service';
 import { CreateShow, ProcessShow } from './dto/all.dto';
 const { spawn } = require('child_process');
@@ -71,6 +71,11 @@ export class AppController {
     
   @Post("download-anime")
   async getShow(@Body() body: CreateShow) {
+    if (!body.name) {
+      throw new NotFoundException('Missing parameter: name');
+    }
+
+
     const pythonScript = path.resolve(__dirname, '../../__main__.py');
 
     const inputUrl = `-i https://www.wcostream.tv/anime/${body.name}`;
