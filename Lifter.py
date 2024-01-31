@@ -99,6 +99,15 @@ class Lifter(object):
 
         return response
 
+    def check_for_premium(self, url):
+        page = self.request_c(url)
+        soup = BeautifulSoup(page.text, 'html.parser')
+
+        premium_text = "This Video is For the WCO Premium Users Only"
+
+        # Check if the premium text is present in the page content
+        return premium_text in soup.get_text()
+
     def find_download_link(self, url):
         return self.get_download_url(self.find_hidden_url(url))
 
@@ -202,6 +211,9 @@ class Lifter(object):
         if (self.threads != None and self.threads != 0):
             if (len(matching) == 1):
                 for item in matching:
+                if self.check_for_premium(item):
+                    continue
+
                     source_url, backup_url = self.find_download_link(item)
                     hidden_url = self.find_hidden_url(item)
                     if self.resolution == '480' or len(source_url[0]) > 2:
@@ -261,6 +273,9 @@ class Lifter(object):
                         break
         else:
             for item in matching:
+                if self.check_for_premium(item):
+                    continue
+
                 source_url, backup_url = self.find_download_link(item)
                 hidden_url = self.find_hidden_url(item)
                 if self.resolution == '480' or len(source_url[0]) > 2:
