@@ -1,0 +1,165 @@
+/* Reset some default styles */
+body, h1, h2, p, ul, ol, li {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    line-height: 1.6;
+	background-color: #111827;
+	overflow: visible;
+    touch-action: auto;
+	font-size: 20px;
+}
+
+.overlay {
+	z-index: -1;
+}
+
+.form {
+	min-width: 800px;
+}
+
+.search-container {
+	margin-top: 15px;
+}
+
+.search-container input {
+	height: 60px;
+    font-size: 22px !important;
+}
+
+#list {
+	margin-top: 50px;
+	overflow-y: scroll;
+    height: 80vh;
+	display: flex;
+    flex-direction: column;
+}
+
+/* Apply these styles to the #list container */
+#list {
+  scrollbar-width: thin;
+  scrollbar-color: #333333 #181818; /* thumb color, track color */
+}
+
+/* Webkit-based browsers (Chrome, Safari) */
+#list::-webkit-scrollbar {
+  width: 10px; /* width of the entire scrollbar */
+}
+
+#list::-webkit-scrollbar-track {
+  background-color: #181818; /* color of the track */
+}
+
+#list::-webkit-scrollbar-thumb {
+  background-color: #333333; /* color of the thumb */
+}
+
+#list::-webkit-scrollbar-thumb:hover {
+  background-color: #555555; /* color of the thumb on hover */
+}
+
+
+/* Header styles */
+header {
+
+}
+
+/* Main content styles */
+main {
+    margin: 20px auto;
+    padding: 20px;
+	color: white;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-top: 50px;
+}
+
+.animeSelector {
+	margin-top: 10px;
+	font-size: 20px;
+	height: 60px;
+}
+
+.buttons {
+	margin-top: 20px;
+	display: flex;
+	gap: 20px;
+	font-size: 20px;
+}
+
+.centered-div {
+	width: 200px; /* Adjust the width as needed */
+	height: 200px; /* Adjust the height as needed */
+	background-color: #f0f0f0;
+	border: 1px solid #ccc;
+	text-align: center;
+	line-height: 200px; /* Should be equal to the height for vertical centering */
+	position: absolute;
+}
+
+.modal {
+  	background-color: #111827;
+	border: solid white 3px;
+	color: white;
+}
+
+.list-item {
+	cursor: pointer;
+	padding: 5px 0;
+	position: relative;
+	width: fit-content;
+}
+
+.list-item::before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 4px;
+    border-radius: 4px;
+    background-color: #fff;
+    bottom: 0;
+    left: 0;
+    transform-origin: right;
+    transform: scaleX(0);
+    transition: transform .3s ease-in-out;
+  }
+
+.list-item:hover::before {
+  transform-origin: left;
+  transform: scaleX(1);
+}
+
+.modal-content {
+	display: flex;
+	justify-content: center;
+	flex-direction: column;
+	align-items: center;
+}
+
+/* Footer styles */
+footer {
+
+}
+
+/* Basic link styles */
+a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* Responsive styles */
+@media (max-width: 600px) {
+    main {
+        padding: 10px;
+    }
+}

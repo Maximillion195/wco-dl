@@ -1,26 +1,41 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseInterceptors, Inject } from '@nestjs/common';
 import { AppService } from './app.service';
 import { CreateShow, ProcessShow } from './dto/all.dto';
 const { spawn } = require('child_process');
 const path = require('path');
-const axios = require('axios');
-const cheerio = require('cheerio');
+import { Cache } from 'cache-manager';
+import axios from 'axios';
+import * as cheerio from 'cheerio';
+import { CACHE_MANAGER, CacheInterceptor } from '@nestjs/cache-manager';
+
 const { exec } = require('child_process');
+
 
 const isProd = process.env.NODE_ENV === 'production';
 const outputBase = isProd ? "/data/torrents/completed" : "./output";
 
 @Controller()
+@UseInterceptors(CacheInterceptor)
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache) {}
+  //constructor(private readonly appService: AppService) {}
 
   @Get("get-website")
+    
   getWebsite() {
     return "https://www.wcostream.tv/"
   }
 
   @Get("get-all-dubbed-anime-names")
+  @UseInterceptors(CacheInterceptor) // Apply CacheInterceptor
   async getAllDubbedAnimes() {
+    // Check if data is already in cache
+    const cachedData = await this.cacheManager.get('allDubbedAnimes');
+
+    if (cachedData) {
+      return cachedData;
+    }
+
     const requestData = {
       cmd: 'request.get',
       url: 'https://www.wcostream.tv/dubbed-anime-list/',
@@ -46,7 +61,10 @@ export class AppController {
           name,
           path,
           });
-        });
+    });
+    
+    // Store data in cache for future requests
+    await this.cacheManager.set('allDubbedAnimes', animePaths, 3600000); // Cached for 1 hour
 
     return animePaths
   }
