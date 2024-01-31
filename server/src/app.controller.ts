@@ -14,6 +14,8 @@ const { exec } = require('child_process');
 const isProd = process.env.NODE_ENV === 'production';
 const outputBase = isProd ? "/data/torrents/completed" : "./output";
 
+const appService = new AppService();
+
 @Controller()
 @UseInterceptors(CacheInterceptor)
 export class AppController {
@@ -21,7 +23,6 @@ export class AppController {
   //constructor(private readonly appService: AppService) {}
 
   @Get("get-website")
-    
   getWebsite() {
     return "https://www.wcostream.tv/"
   }
@@ -36,35 +37,10 @@ export class AppController {
       return cachedData;
     }
 
-    const requestData = {
-      cmd: 'request.get',
-      url: 'https://www.wcostream.tv/dubbed-anime-list/',
-      maxTimeout: 60000
-    };
-
-    const response = await axios.post('http://192.168.1.48:8191/v1', requestData, {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
-    
-      const $ = cheerio.load(response.data.solution.response);
-
-      // Array to store inner HTML of hrefs starting with "/anime"
-      const animePaths = [];
-
-      // Select href attributes starting with "/anime" and get inner HTML
-    $('a[href^="/anime"]').each((index, element) => {
-        const name = $(element).html();  
-        const path = $(element).attr('href').replace('/anime', '').replace('/', ''); // Remove "/anime"
-        animePaths.push({
-          name,
-          path,
-          });
-    });
+    const animePaths = await appService.getAllDubbedAnimes()
     
     // Store data in cache for future requests
-    await this.cacheManager.set('allDubbedAnimes', animePaths, 3600000); // Cached for 1 hour
+    await this.cacheManager.set('allDubbedAnimes', animePaths, 172800 * 1000); // Cache for 2 days
 
     return animePaths
   }

@@ -4,6 +4,8 @@ import { AppService } from './app.service';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { CacheModule } from '@nestjs/cache-manager';
+import { ScheduleModule } from 'nest-schedule';
+import { ScheduledTaskService } from './scheduled-task.service';
 
 @Module({
   imports: [
@@ -11,8 +13,10 @@ import { CacheModule } from '@nestjs/cache-manager';
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'client'),
     }),
+    ScheduleModule.register(),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, ScheduledTaskService],
 })
-export class AppModule {}
+export class AppModule { }
+
