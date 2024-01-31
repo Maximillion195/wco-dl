@@ -4,8 +4,6 @@ import { CreateShow, ProcessShow } from './dto/all.dto';
 const { spawn } = require('child_process');
 const path = require('path');
 import { Cache } from 'cache-manager';
-import axios from 'axios';
-import * as cheerio from 'cheerio';
 import { CACHE_MANAGER, CacheInterceptor } from '@nestjs/cache-manager';
 
 const { exec } = require('child_process');
@@ -14,13 +12,12 @@ const { exec } = require('child_process');
 const isProd = process.env.NODE_ENV === 'production';
 const outputBase = isProd ? "/data/torrents/completed" : "./output";
 
-const appService = new AppService();
+
 
 @Controller()
 @UseInterceptors(CacheInterceptor)
 export class AppController {
-  constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache) {}
-  //constructor(private readonly appService: AppService) {}
+  constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache, private readonly appService: AppService) {}
 
   @Get("get-website")
   getWebsite() {
@@ -37,7 +34,7 @@ export class AppController {
       return cachedData;
     }
 
-    const animePaths = await appService.getAllDubbedAnimes()
+    const animePaths = await this.appService.getAllDubbedAnimes()
     
     // Store data in cache for future requests
     await this.cacheManager.set('allDubbedAnimes', animePaths, 172800 * 1000); // Cache for 2 days

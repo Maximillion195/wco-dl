@@ -6,11 +6,9 @@ import { Cache } from 'cache-manager';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Logger } from '@nestjs/common';
 
-const appService = new AppService();
-
 @Injectable()
 export class ScheduledTaskService implements OnApplicationBootstrap {
-	constructor(@Inject(CACHE_MANAGER) private cacheManager: Cache) { }
+	constructor(private readonly appService: AppService , @Inject(CACHE_MANAGER) private cacheManager: Cache) { }
 	private readonly logger = new Logger(ScheduledTaskService.name);
 
 	onApplicationBootstrap() {
@@ -20,8 +18,8 @@ export class ScheduledTaskService implements OnApplicationBootstrap {
 
 	@Cron('0 1 * * *') // Run every day at 1 AM
 	async getAllDubbedAnimes() {
-		this.logger.log('Running scheduled job, getting all dubbed animes list');
-		const animePaths = await appService.getAllDubbedAnimes()
+		this.logger.log('Getting all dubbed animes list');
+		const animePaths = await this.appService.getAllDubbedAnimes()
 
 		// Store data in cache for future requests
 		await this.cacheManager.set('allDubbedAnimes', animePaths, 172800 * 1000); // Cache for 2 days
