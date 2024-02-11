@@ -124,8 +124,12 @@
         items.forEach((item) => {
           const listItem = document.createElement('li');
           listItem.className = 'list-item';
-          listItem.textContent = item.name;
 
+		  const listItemSpan = document.createElement('span');
+		  listItemSpan.className = 'list-item-inner';
+		  listItemSpan.textContent = item.name;
+		  listItem.appendChild(listItemSpan);
+		  
           listItem.addEventListener('click', () => {
             $('.modal-content .modalAnimeName').html(`<p>${item.name}</p>`);
 

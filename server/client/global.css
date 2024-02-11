@@ -50,7 +50,6 @@ main {
 }
 
 .searchBar {
-	padding: 50px 0;
 	position: sticky;
 	width: 100%;
 	top: 0;
@@ -124,11 +123,16 @@ main {
 .list-item {
 	cursor: pointer;
 	padding: 5px 0;
-	position: relative;
-	width: fit-content;
+	width: 100%;
 }
 
-.list-item::before {
+.list-item-inner {
+	width: fit-content;
+    display: block;
+    position: relative;
+}
+
+.list-item-inner::before {
     content: '';
     position: absolute;
     width: 100%;
@@ -142,7 +146,7 @@ main {
     transition: transform .3s ease-in-out;
   }
 
-.list-item:hover::before {
+.list-item:hover .list-item-inner::before {
   transform-origin: left;
   transform: scaleX(1);
 }
