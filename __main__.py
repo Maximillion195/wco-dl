@@ -91,7 +91,7 @@ class Main:
             exit()
 
         if args.highdef:
-            args.highdef = '720'
+            args.highdef = '1080'
         else:
             args.highdef = '480'
         

@@ -137,19 +137,25 @@ class Lifter(object):
         return iframe
 
     def download_single(self, url, extra):
-        download_url, source_url = self.find_download_link(url)
+        source_urls, backup_url = self.find_download_link(url)
         hidden_url = self.find_hidden_url(url)
         if self.resolution == '480':
             download_url = download_url[0][1]
         else:
             try:
-                download_url = source_url[1][1]
+                # FHD
+                download_url = source_urls[1][2]
             except Exception:
-                download_url = download_url[0][1] 
+                try:
+                    # HD
+                    download_url = source_urls[1][1]
+                except Exception:
+                    # SD
+                    download_url = source_urls[0][1]
         show_info = self.info_extractor(extra)
         output = self.check_output(show_info[0])
 
-        Downloader(logger=self.logger, download_url=download_url, backup_url=source_url, hidden_url=hidden_url,output=output, header=self.header, user_agent=self.user_agent,
+        Downloader(logger=self.logger, download_url=download_url, backup_url=source_urls, hidden_url=hidden_url,output=output, header=self.header, user_agent=self.user_agent,
                    show_info=show_info, settings=self.settings, quiet=self.quiet)
 
     def test(self, i, ii):
@@ -214,15 +220,21 @@ class Lifter(object):
                     if self.check_for_premium(item):
                         continue
 
-                    source_url, backup_url = self.find_download_link(item)
+                    source_urls, backup_url = self.find_download_link(item)
                     hidden_url = self.find_hidden_url(item)
-                    if self.resolution == '480' or len(source_url[0]) > 2:
-                        download_url = source_url[0][1]
+                    if self.resolution == '480' or len(source_urls[0]) > 2:
+                        download_url = source_urls[0][1]
                     else:
                         try:
-                            download_url = source_url[1][1]
+                            # FHD
+                            download_url = source_urls[1][2]
                         except Exception:
-                            download_url = source_url[0][1] 
+                            try:
+                                # HD
+                                download_url = source_urls[1][1]
+                            except Exception:
+                                # SD
+                                download_url = source_urls[0][1]
                     show_info = self.info_extractor(item)
                     output = self.check_output(show_info[0])
 
@@ -276,15 +288,22 @@ class Lifter(object):
                 if self.check_for_premium(item):
                     continue
 
-                source_url, backup_url = self.find_download_link(item)
+                source_urls, backup_url = self.find_download_link(item)
                 hidden_url = self.find_hidden_url(item)
-                if self.resolution == '480' or len(source_url[0]) > 2:
-                    download_url = source_url[0][1]
+                if self.resolution == '480' or len(source_urls[0]) > 2:
+                    download_url = source_urls[0][1]
                 else:
                     try:
-                        download_url = source_url[1][1]
+                        # FHD
+                        download_url = source_urls[1][2]
+                        print(download_url)
                     except Exception:
-                        download_url = source_url[0][1] 
+                        try:
+                            # HD
+                            download_url = source_urls[1][1]
+                        except Exception:
+                            # SD
+                            download_url = source_urls[0][1]
                 show_info = self.info_extractor(item)
                 output = self.check_output(show_info[0])
 
@@ -339,17 +358,20 @@ class Lifter(object):
                 raise Exception('Sources XMLHttpRequest request failed')
             json_data = page2.json()
 
-            # Only two qualities are ever available: 480p ("SD") and 720p ("HD").
+            # Only three qualities are ever available: 480p ("SD"), 720p ("HD") and 1080p ("FHD").
             source_urls = []
             sd_token = json_data.get('enc', '')
             hd_token = json_data.get('hd', '')
+            fhd_token = json_data.get('fhd', '')
             source_base_url = json_data.get('server', '') + '/getvid?evid='
             if sd_token:
                 source_urls.append(('480 (SD)', source_base_url + sd_token))  # Order the items as (LABEL, URL).
             if hd_token:
                 source_urls.append(('720 (HD)', source_base_url + hd_token))
+            if fhd_token:
+                source_urls.append(('1080 (FHD)', source_base_url + fhd_token))
             # Use the same backup stream method as the source: cdn domain + SD stream.
-            backup_url = json_data.get('cdn', '') + '/getvid?evid=' + (sd_token or hd_token)
+            backup_url = json_data.get('cdn', '') + '/getvid?evid=' + (sd_token or hd_token or fhd_token)
         else:
             # Alternative video player page, with plain stream links in the JWPlayer javascript.
             sources_block = re.search(r'sources:\s*?\[(.*?)\]', html, re.DOTALL).group(1)
