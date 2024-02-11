@@ -211,8 +211,8 @@ class Lifter(object):
         if (self.threads != None and self.threads != 0):
             if (len(matching) == 1):
                 for item in matching:
-                if self.check_for_premium(item):
-                    continue
+                    if self.check_for_premium(item):
+                        continue
 
                     source_url, backup_url = self.find_download_link(item)
                     hidden_url = self.find_hidden_url(item)
