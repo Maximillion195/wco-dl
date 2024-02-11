@@ -1,192 +1,277 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WCO Anime Downloader</title>
+    <link rel="stylesheet" href="normalize.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.css"
+    />
+    <link rel="stylesheet" href="global.css" />
+    <link rel="stylesheet" href="tailwind.css" />
+  </head>
 
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>WCO Anime Downloader</title>
-	<link rel="stylesheet" href="normalize.css">
-	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.css" />
-	<link rel="stylesheet" href="global.css">
-	<link rel="stylesheet" href="tailwind.css">
-</head>
+  <body>
+    <main>
+      <div class="searchBar">
+        <div class="search-container">
+          <input type="text" id="searchInput" placeholder="Search anime..." />
+        </div>
+        <div class="overlay fixed h-full top-0 w-full"></div>
+      </div>
+      <div class="list-container">
+        <div class="form">
+          <ul id="list">
+            <!-- List items will be dynamically added here -->
+          </ul>
 
-<body>
+          <div id="ex1" class="modal">
+            <div class="modal-content">
+              <div class="modalAnimeName"></div>
 
-	<main>
-		<div class="searchBar">
-			<div class="search-container">
-				<input type="text" id="searchInput" placeholder="Search anime...">
-			</div>
-			<div class="overlay fixed h-full top-0 w-full"></div>
-		</div>
-		<div class="list-container">
-			<div class="form">
-				<ul id="list">
-					<!-- List items will be dynamically added here -->
-				</ul>
-		
-				<div id="ex1" class="modal">
-					<div class="modal-content">
-						<div class="modalAnimeName"></div>
-		
-						<div class="buttons">
-							<button id="downloadButton"
-								class="relative z-10 inline-flex h-full items-center px-4 py-2 text-lg font-medium leading-5 transition duration-150 ease-in-out hover:z-20 focus:z-20 focus:outline-none button-md text-white border bg-transparent border-gray-600 hover:border-gray-200 focus:border-gray-100 active:border-gray-100 rounded-l-md">Download</button>
-							<button id="processButton"
-								class="relative z-10 inline-flex h-full items-center px-4 py-2 text-lg font-medium leading-5 transition duration-150 ease-in-out hover:z-20 focus:z-20 focus:outline-none button-md text-white border bg-transparent border-gray-600 hover:border-gray-200 focus:border-gray-100 active:border-gray-100 rounded-l-md">Process</button>
-							<button id="newestButton"
-								class="relative z-10 inline-flex h-full items-center px-4 py-2 text-lg font-medium leading-5 transition duration-150 ease-in-out hover:z-20 focus:z-20 focus:outline-none button-md text-white border bg-transparent border-gray-600 hover:border-gray-200 focus:border-gray-100 active:border-gray-100 rounded-l-md">Newest</button>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	</main>
+              <div
+                class="max-w-md w-full p-3 rounded-lg shadow-md flex gap-4 items-end"
+              >
+                <div>
+                  <label for="season" class="block mb-2 text-sm"
+                    >Season Number:</label
+                  >
+                  <input
+                    type="text"
+                    id="season"
+                    name="season"
+                    class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:border-blue-300 text-black"
+                  />
+                </div>
+                <div>
+                  <label for="episode" class="block mb-2 text-sm"
+                    >Episode Range (1-1):
+                  </label>
+                  <input
+                    type="text"
+                    id="episode"
+                    name="episode"
+                    class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring focus:border-blue-300 text-black"
+                  />
+                </div>
+                <div class="h-full items-end">
+                  <button
+                    id="downloadSpecficButton"
+                    class="relative z-10 inline-flex h-full items-center px-4 py-2 text-sm font-medium leading-5 transition duration-150 ease-in-out hover:z-20 focus:z-20 focus:outline-none button-md text-white border bg-transparent border-gray-600 hover:border-gray-200 focus:border-gray-100 active:border-gray-100 rounded-l-md justify-center"
+                  >
+                    Download
+                  </button>
+                </div>
+              </div>
 
-	<footer>
+              <div class="buttons flex">
+                <button
+                  id="downloadButton"
+                  class="relative z-10 inline-flex h-full items-center px-4 py-2 text-sm font-medium leading-5 transition duration-150 ease-in-out hover:z-20 focus:z-20 focus:outline-none button-md text-white border bg-transparent border-gray-600 hover:border-gray-200 focus:border-gray-100 active:border-gray-100 rounded-l-md justify-center"
+                >
+                  Get all seasons
+                </button>
+                <button
+                  id="newestButton"
+                  class="relative z-10 inline-flex h-full items-center px-4 py-2 text-sm font-medium leading-5 transition duration-150 ease-in-out hover:z-20 focus:z-20 focus:outline-none button-md text-white border bg-transparent border-gray-600 hover:border-gray-200 focus:border-gray-100 active:border-gray-100 rounded-l-md justify-center"
+                >
+                  Get latest
+                </button>
+                <button
+                  id="processButton"
+                  class="relative z-10 inline-flex h-full items-center px-4 py-2 text-sm font-medium leading-5 transition duration-150 ease-in-out hover:z-20 focus:z-20 focus:outline-none button-md text-white border bg-transparent border-gray-600 hover:border-gray-200 focus:border-gray-100 active:border-gray-100 rounded-l-md justify-center"
+                >
+                  Sonarr Import
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
 
-	</footer>
-	<!-- Add any additional scripts or libraries here -->
-	<script>
-									let originalList; // Variable to store the fetched list
+    <footer></footer>
+    <!-- Add any additional scripts or libraries here -->
+    <script>
+      let originalList; // Variable to store the fetched list
 
-									(async function () {
-										originalList = await fetchListFromAPI();
-										renderList(originalList);
-									})();
+      (async function () {
+        originalList = await fetchListFromAPI();
+        renderList(originalList);
+      })();
 
-		// Function to fetch the list from the API
-		async function fetchListFromAPI() {
-			try {
-				const response = await fetch('http://192.168.1.48:3000/get-all-dubbed-anime-names');
-				const data = await response.json();
-				return data;
-			} catch (error) {
-				console.error('Error fetching data:', error);
-				return [];
-			}
-		}
+      // Function to fetch the list from the API
+      async function fetchListFromAPI() {
+        try {
+          const response = await fetch(
+            'http://192.168.1.48:3000/get-all-dubbed-anime-names',
+          );
+          const data = await response.json();
+          return data;
+        } catch (error) {
+          console.error('Error fetching data:', error);
+          return [];
+        }
+      }
 
-		// Function to create and append list items
-		function renderList(items) {
-			const listContainer = document.getElementById('list');
-			listContainer.innerHTML = '';
+      // Function to create and append list items
+      function renderList(items) {
+        const listContainer = document.getElementById('list');
+        listContainer.innerHTML = '';
 
-			items.forEach(item => {
-				const listItem = document.createElement('li');
-				listItem.className = 'list-item';
-				listItem.textContent = item.name;
+        items.forEach((item) => {
+          const listItem = document.createElement('li');
+          listItem.className = 'list-item';
+          listItem.textContent = item.name;
 
-				listItem.addEventListener('click', () => {
-					$('.modal-content .modalAnimeName').html(`<p>${item.name}</p>`);
+          listItem.addEventListener('click', () => {
+            $('.modal-content .modalAnimeName').html(`<p>${item.name}</p>`);
 
-					// Remove existing click event handlers
-					$('.modal-content #downloadButton').off('click');
-					$('.modal-content #processButton').off('click');
+            // Remove existing click event handlers
+            $('.modal-content #downloadButton').off('click');
+            $('.modal-content #processButton').off('click');
 
-					$('.modal-content #downloadButton').click(() => handleDownloadButtonClick(item.path));
-					$('.modal-content #processButton').click(() => handleProcessButtonClick(item.path));
-					$('.modal-content #newestButton').click(() => handleProcessButtonClick(item.path, true));
-					$('#ex1').modal()
-				});
+            $('.modal-content #downloadButton').click(() =>
+              handleDownloadButtonClick({ name: item.path }),
+            );
+            $('.modal-content #processButton').click(() =>
+              handleProcessButtonClick(item.path),
+            );
+            $('.modal-content #newestButton').click(() =>
+              handleDownloadButtonClick({ name: item.path, newest: true }),
+            );
 
-				listContainer.appendChild(listItem);
-			});
-		}
+            $('.modal-content #downloadSpecficButton').click(() => {
+              const season = document.getElementById('season').value;
+              const episode = document.getElementById('episode').value;
 
-		function debounce(func, delay) {
-			let timeoutId;
+              const regex = /^\d+-\d+$/; // Regular expression for format x-y where both x and y are integers
 
-			return function (...args) {
-				clearTimeout(timeoutId);
+              if (episode !== '' && !regex.test(episode)) {
+                alert(
+                  "Please enter the season and episode in the format 'x-y'. For example, '1-1', '1-9', '4-7'.",
+                );
+                return;
+              }
 
-				timeoutId = setTimeout(() => {
-					func(...args);
-				}, delay);
-			};
-		}
+              handleDownloadButtonClick({ name: item.path, season, episode });
+            });
+            $('#ex1').modal();
+          });
 
-		// Function to filter the list based on the search input
-		function filterList(searchTerm, originalList) {
-			const filteredList = originalList.filter(item =>
-				item.name.toLowerCase().includes(searchTerm.toLowerCase())
-			);
+          listContainer.appendChild(listItem);
+        });
+      }
 
-			renderList(filteredList);
-		}
+      function debounce(func, delay) {
+        let timeoutId;
 
-									const debouncedSearch = debounce(function () {
-			const searchTerm = document.getElementById('searchInput').value;
-									filterList(searchTerm, originalList); // Use the already fetched list
-		}, 300);
+        return function (...args) {
+          clearTimeout(timeoutId);
 
+          timeoutId = setTimeout(() => {
+            func(...args);
+          }, delay);
+        };
+      }
 
-		document.getElementById('searchInput').addEventListener('input', debouncedSearch);
+      // Function to filter the list based on the search input
+      function filterList(searchTerm, originalList) {
+        const filteredList = originalList.filter((item) =>
+          item.name.toLowerCase().includes(searchTerm.toLowerCase()),
+        );
 
-		// Function to open the modal with the selected item name
-		function openModal(itemName) {
-			const modal = document.getElementById('myModal');
-			const modalContent = document.getElementById('modalContent');
-			modalContent.textContent = `Selected Anime: ${itemName}`;
-			modal.style.display = 'block';
-		}
+        renderList(filteredList);
+      }
 
-		// Function to close the modal
-		function closeModal() {
-			const modal = document.getElementById('myModal');
-			modal.style.display = 'none';
-		}
+      const debouncedSearch = debounce(function () {
+        const searchTerm = document.getElementById('searchInput').value;
+        filterList(searchTerm, originalList); // Use the already fetched list
+      }, 300);
 
-				function handleDownloadButtonClick(selectedAnime, newest = false) {
-			const apiUrl = `http://192.168.1.48:3000/download-anime`;
+      document
+        .getElementById('searchInput')
+        .addEventListener('input', debouncedSearch);
 
-			// Use the selected anime to make an API request
-			fetch(apiUrl, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({ 
-					name: selectedAnime,
-					newest: newest,
-				 }),
-			})
-				// .then(response => response.json())
-				// .then(data => {
-				// 	console.log(`API Response for ${selectedAnime}:`, data);
-				// })
-				.catch(error => {
-					console.error(`Error making API request for ${selectedAnime}:`, error);
-				});
-			$.modal.close();
-		}
+      // Function to open the modal with the selected item name
+      function openModal(itemName) {
+        const modal = document.getElementById('myModal');
+        const modalContent = document.getElementById('modalContent');
+        modalContent.textContent = `Selected Anime: ${itemName}`;
+        modal.style.display = 'block';
+      }
 
-		function handleProcessButtonClick(selectedAnime) {
-			const apiUrl = `http://192.168.1.48:3000/process-anime`;
+      // Function to close the modal
+      function closeModal() {
+        const modal = document.getElementById('myModal');
+        modal.style.display = 'none';
+      }
 
-			// Use the selected anime to make an API request
-			fetch(apiUrl, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({ name: selectedAnime }),
-			})
-				// .then(response => response.json())
-				// .then(data => {
-				// 	console.log(`API Response for ${selectedAnime}:`, data);
-				// })
-				.catch(error => {
-					console.error(`Error making API request for ${selectedAnime}:`, error);
-				});
+      function handleDownloadButtonClick({
+        name,
+        newest = false,
+        season = null,
+        episode = null,
+      }) {
+        const apiUrl = `http://192.168.1.48:3000/download-anime`;
+        // const apiUrl = `http://localhost:3000/download-anime`;
 
-			// Close the modal after making the API request
-			$.modal.close();
-		}
-	</script>
-	<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.js"></script>
-</body>
+        // Use the selected anime to make an API request
+        fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name,
+            newest: newest,
+            season,
+            episode,
+          }),
+        })
+          // .then(response => response.json())
+          // .then(data => {
+          // 	console.log(`API Response for ${selectedAnime}:`, data);
+          // })
+          .catch((error) => {
+            console.error(
+              `Error making API request for ${selectedAnime}:`,
+              error,
+            );
+          });
+        $.modal.close();
+      }
 
+      function handleProcessButtonClick(selectedAnime) {
+        const apiUrl = `http://192.168.1.48:3000/process-anime`;
+        // const apiUrl = `http://localhost:3000/process-anime`;
+
+        // Use the selected anime to make an API request
+        fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name: selectedAnime }),
+        })
+          // .then(response => response.json())
+          // .then(data => {
+          // 	console.log(`API Response for ${selectedAnime}:`, data);
+          // })
+          .catch((error) => {
+            console.error(
+              `Error making API request for ${selectedAnime}:`,
+              error,
+            );
+          });
+
+        // Close the modal after making the API request
+        $.modal.close();
+      }
+    </script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.js"></script>
+  </body>
 </html>

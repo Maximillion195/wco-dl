@@ -4609,6 +4609,11 @@ input[type=range]::-moz-range-thumb {
     color: rgb(192 38 211/var(--tw-text-opacity))
 }
 
+.text-black {
+    --tw-text-opacity: 1;
+    color: rgb(0 0 0/var(--tw-text-opacity))
+}
+
 .text-gray-100 {
     --tw-text-opacity: 1;
     color: rgb(243 244 246/var(--tw-text-opacity))
