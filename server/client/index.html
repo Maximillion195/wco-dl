@@ -129,19 +129,22 @@
           listItem.addEventListener('click', () => {
             $('.modal-content .modalAnimeName').html(`<p>${item.name}</p>`);
 
-            // Remove existing click event handlers
+            // Remove existing click event handlers when the modal opens
             $('.modal-content #downloadButton').off('click');
             $('.modal-content #processButton').off('click');
+            $('.modal-content #newestButton').off('click');
+            $('.modal-content #downloadSpecficButton').off('click');
 
+			// Add the new event listeners 
             $('.modal-content #downloadButton').click(() =>
               handleDownloadButtonClick({ name: item.path }),
             );
             $('.modal-content #processButton').click(() =>
               handleProcessButtonClick(item.path),
             );
-            $('.modal-content #newestButton').click(() =>
-              handleDownloadButtonClick({ name: item.path, newest: true }),
-            );
+            $('.modal-content #newestButton').click(() => {
+              handleDownloadButtonClick({ name: item.path, newest: true });
+            });
 
             $('.modal-content #downloadSpecficButton').click(() => {
               const season = document.getElementById('season').value;
@@ -149,7 +152,11 @@
 
               const regex = /^\d+-\d+$/; // Regular expression for format x-y where both x and y are integers
 
-              if (episode !== '' && episode.indexOf("-") > -1 && !regex.test(episode)) {
+              if (
+                episode !== '' &&
+                episode.indexOf('-') > -1 &&
+                !regex.test(episode)
+              ) {
                 alert(
                   "Please enter the episode range in the format 'x-y'. For example, '1-1', '1-9', '4-7'.",
                 );
