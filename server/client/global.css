@@ -3,6 +3,27 @@
 	--max-container: 800px;
 }
 
+html {
+	scrollbar-gutter: stable;
+}
+
+/* Webkit-based browsers (Chrome, Safari) */
+html::-webkit-scrollbar {
+  width: 10px; /* width of the entire scrollbar */
+}
+
+html::-webkit-scrollbar-track {
+  background-color: #374151; /* color of the track */
+}
+
+html::-webkit-scrollbar-thumb {
+  background-color: #555555; /* color of the thumb */
+}
+
+html::-webkit-scrollbar-thumb:hover {
+  background-color: #374151; /* color of the track */
+}
+
 body {
     font-family: 'Arial', sans-serif;
     line-height: 1.6;
@@ -10,29 +31,6 @@ body {
 	overflow: visible;
     touch-action: auto;
 	font-size: 20px;
-}
-
-/* Apply these styles to the #list container */
-body {
-  scrollbar-width: thin;
-  scrollbar-color: #333333 #181818; /* thumb color, track color */
-}
-
-/* Webkit-based browsers (Chrome, Safari) */
-body::-webkit-scrollbar {
-  width: 20px; /* width of the entire scrollbar */
-}
-
-body::-webkit-scrollbar-track {
-  background-color: #374151; /* color of the track */
-}
-
-body::-webkit-scrollbar-thumb {
-  background-color: #555555; /* color of the thumb */
-}
-
-body::-webkit-scrollbar-thumb:hover {
-  background-color: #374151; /* color of the track */
 }
 
 main {

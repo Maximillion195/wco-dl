@@ -148,10 +148,10 @@
 					name: selectedAnime
 				 }),
 			})
-				.then(response => response.json())
-				.then(data => {
-					console.log(`API Response for ${selectedAnime}:`, data);
-				})
+				// .then(response => response.json())
+				// .then(data => {
+				// 	console.log(`API Response for ${selectedAnime}:`, data);
+				// })
 				.catch(error => {
 					console.error(`Error making API request for ${selectedAnime}:`, error);
 				});
@@ -169,10 +169,10 @@
 				},
 				body: JSON.stringify({ name: selectedAnime }),
 			})
-				.then(response => response.json())
-				.then(data => {
-					console.log(`API Response for ${selectedAnime}:`, data);
-				})
+				// .then(response => response.json())
+				// .then(data => {
+				// 	console.log(`API Response for ${selectedAnime}:`, data);
+				// })
 				.catch(error => {
 					console.error(`Error making API request for ${selectedAnime}:`, error);
 				});
