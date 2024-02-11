@@ -193,8 +193,8 @@ class Lifter(object):
             season = 'season-All'
 
         if season != "season-All" and ep_range != "All":
-            episodes = ["episode-{0}".format(n) for n in
-                        range(int(ep_range[0]), int(ep_range[1]) + 1)]
+            start_ep, end_ep = map(int, ep_range.split('-'))
+            episodes = ["episode-{0}".format(n) for n in range(start_ep, end_ep + 1)]
             if season == 'season-1':
                 matching = [s for s in links if 'season' not in s or f"{season}-" in s]
             else:
