@@ -35,6 +35,8 @@
 								class="relative z-10 inline-flex h-full items-center px-4 py-2 text-lg font-medium leading-5 transition duration-150 ease-in-out hover:z-20 focus:z-20 focus:outline-none button-md text-white border bg-transparent border-gray-600 hover:border-gray-200 focus:border-gray-100 active:border-gray-100 rounded-l-md">Download</button>
 							<button id="processButton"
 								class="relative z-10 inline-flex h-full items-center px-4 py-2 text-lg font-medium leading-5 transition duration-150 ease-in-out hover:z-20 focus:z-20 focus:outline-none button-md text-white border bg-transparent border-gray-600 hover:border-gray-200 focus:border-gray-100 active:border-gray-100 rounded-l-md">Process</button>
+							<button id="newestButton"
+								class="relative z-10 inline-flex h-full items-center px-4 py-2 text-lg font-medium leading-5 transition duration-150 ease-in-out hover:z-20 focus:z-20 focus:outline-none button-md text-white border bg-transparent border-gray-600 hover:border-gray-200 focus:border-gray-100 active:border-gray-100 rounded-l-md">Newest</button>
 						</div>
 					</div>
 				</div>
@@ -85,6 +87,7 @@
 
 					$('.modal-content #downloadButton').click(() => handleDownloadButtonClick(item.path));
 					$('.modal-content #processButton').click(() => handleProcessButtonClick(item.path));
+					$('.modal-content #newestButton').click(() => handleProcessButtonClick(item.path, true));
 					$('#ex1').modal()
 				});
 
@@ -135,7 +138,7 @@
 			modal.style.display = 'none';
 		}
 
-		function handleDownloadButtonClick(selectedAnime) {
+				function handleDownloadButtonClick(selectedAnime, newest = false) {
 			const apiUrl = `http://192.168.1.48:3000/download-anime`;
 
 			// Use the selected anime to make an API request
@@ -145,7 +148,8 @@
 					'Content-Type': 'application/json',
 				},
 				body: JSON.stringify({ 
-					name: selectedAnime
+					name: selectedAnime,
+					newest: newest,
 				 }),
 			})
 				// .then(response => response.json())

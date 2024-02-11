@@ -55,10 +55,11 @@ export class AppController {
     const seasonOption = body.season ? `-se ${body.season}` : '';
     const episodeOption = body.episode ? `-epr ${body.episode}` : '';
     const qualityOption = '-hd';
+    const newestOption = body.newest ? `-n` : '';
     const threadsAmount = '-t 2';
     const outputOption = `-o "${outputBase}/${body.name}/"`;
 
-    const pythonCommand = `python ${pythonScript} ${inputUrl} ${seasonOption} ${episodeOption} ${qualityOption} ${outputOption} ${threadsAmount}`;
+    const pythonCommand = `python ${pythonScript} ${inputUrl} ${seasonOption} ${episodeOption} ${qualityOption} ${newestOption} ${outputOption} ${threadsAmount}`;
 
     console.log(pythonCommand)
     
