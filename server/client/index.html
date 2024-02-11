@@ -5,45 +5,42 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>WCO Anime Downloader</title>
-	<link rel="stylesheet" href="common.css">
+	<link rel="stylesheet" href="normalize.css">
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.css" />
 	<link rel="stylesheet" href="global.css">
 	<link rel="stylesheet" href="tailwind.css">
 </head>
 
 <body>
-	<div class="overlay absolute top-0 h-64 w-full bg-gradient-to-bl from-gray-800 to-gray-900">
-		<div class="relative inset-0 h-full w-full bg-gradient-to-t from-gray-900 to-transparent"></div>
-	</div>
-	<header>
-
-	</header>
 
 	<main>
-		<div class="form">
-			<div class="searchBar"> 
-				<div class="search-container">
-					<input type="text" id="searchInput" placeholder="Search anime...">
-				</div>
+		<div class="searchBar">
+			<div class="search-container">
+				<input type="text" id="searchInput" placeholder="Search anime...">
 			</div>
-
-			<ul id="list">
-				<!-- List items will be dynamically added here -->
-			</ul>
-
-			<div id="ex1" class="modal">
-				<div class="modal-content">
-					<div class="modalAnimeName"></div>
-
-					<div class="buttons">
-						<button id="downloadButton"
-							class="relative z-10 inline-flex h-full items-center px-4 py-2 text-lg font-medium leading-5 transition duration-150 ease-in-out hover:z-20 focus:z-20 focus:outline-none button-md text-white border bg-transparent border-gray-600 hover:border-gray-200 focus:border-gray-100 active:border-gray-100 rounded-l-md">Download</button>
-						<button id="processButton"
-							class="relative z-10 inline-flex h-full items-center px-4 py-2 text-lg font-medium leading-5 transition duration-150 ease-in-out hover:z-20 focus:z-20 focus:outline-none button-md text-white border bg-transparent border-gray-600 hover:border-gray-200 focus:border-gray-100 active:border-gray-100 rounded-l-md">Process</button>
+			<div class="overlay fixed h-full top-0 w-full">
+				<!-- <div class="relative inset-0 h-full w-full bg-gradient-to-t from-gray-900 to-transparent"></div> -->
+			</div>
+		</div>
+		<div class="list-container">
+			<div class="form">
+				<ul id="list">
+					<!-- List items will be dynamically added here -->
+				</ul>
+		
+				<div id="ex1" class="modal">
+					<div class="modal-content">
+						<div class="modalAnimeName"></div>
+		
+						<div class="buttons">
+							<button id="downloadButton"
+								class="relative z-10 inline-flex h-full items-center px-4 py-2 text-lg font-medium leading-5 transition duration-150 ease-in-out hover:z-20 focus:z-20 focus:outline-none button-md text-white border bg-transparent border-gray-600 hover:border-gray-200 focus:border-gray-100 active:border-gray-100 rounded-l-md">Download</button>
+							<button id="processButton"
+								class="relative z-10 inline-flex h-full items-center px-4 py-2 text-lg font-medium leading-5 transition duration-150 ease-in-out hover:z-20 focus:z-20 focus:outline-none button-md text-white border bg-transparent border-gray-600 hover:border-gray-200 focus:border-gray-100 active:border-gray-100 rounded-l-md">Process</button>
+						</div>
 					</div>
 				</div>
 			</div>
-
 		</div>
 	</main>
 
@@ -52,6 +49,13 @@
 	</footer>
 	<!-- Add any additional scripts or libraries here -->
 	<script>
+									let originalList; // Variable to store the fetched list
+
+									(async function () {
+										originalList = await fetchListFromAPI();
+										renderList(originalList);
+									})();
+
 		// Function to fetch the list from the API
 		async function fetchListFromAPI() {
 			try {
@@ -111,20 +115,13 @@
 			renderList(filteredList);
 		}
 
-		// Event listener for the search input with debounce
-		const debouncedSearch = debounce(async function () {
+									const debouncedSearch = debounce(function () {
 			const searchTerm = document.getElementById('searchInput').value;
-			const originalList = await fetchListFromAPI();
-			filterList(searchTerm, originalList);
+									filterList(searchTerm, originalList); // Use the already fetched list
 		}, 300);
 
-		document.getElementById('searchInput').addEventListener('input', debouncedSearch);
 
-		// Initial render with the full list
-		(async function () {
-			const initialList = await fetchListFromAPI();
-			renderList(initialList);
-		})();
+		document.getElementById('searchInput').addEventListener('input', debouncedSearch);
 
 		// Function to open the modal with the selected item name
 		function openModal(itemName) {
