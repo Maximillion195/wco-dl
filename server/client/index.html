@@ -47,7 +47,7 @@
                 </div>
                 <div>
                   <label for="episode" class="block mb-2 text-sm"
-                    >Episode Range (1-1):
+                    >Episode Range (1-5):
                   </label>
                   <input
                     type="text"
@@ -149,9 +149,9 @@
 
               const regex = /^\d+-\d+$/; // Regular expression for format x-y where both x and y are integers
 
-              if (episode !== '' && !regex.test(episode)) {
+              if (episode !== '' && episode.indexOf("-") > -1 && !regex.test(episode)) {
                 alert(
-                  "Please enter the season and episode in the format 'x-y'. For example, '1-1', '1-9', '4-7'.",
+                  "Please enter the episode range in the format 'x-y'. For example, '1-1', '1-9', '4-7'.",
                 );
                 return;
               }
