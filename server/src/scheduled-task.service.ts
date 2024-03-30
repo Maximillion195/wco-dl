@@ -1,5 +1,5 @@
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
-import { Cron } from 'nest-schedule';
+import { Cron } from '@nestjs/schedule';
 import { AppService } from './app.service';
 import { Inject } from '@nestjs/common';
 import { Cache } from 'cache-manager';
