@@ -29,7 +29,7 @@
 
           <div id="ex1" class="modal">
             <div class="modal-content">
-              <div class="modalAnimeName"></div>
+              <a class="modalAnimeName" target="_blank"></a>
 
               <div
                 class="max-w-md w-full p-3 rounded-lg shadow-md flex gap-4 items-end"
@@ -131,6 +131,7 @@
 		  listItem.appendChild(listItemSpan);
 		  
           listItem.addEventListener('click', () => {
+            $('.modal-content .modalAnimeName').attr('href', `https://www.wcostream.tv/anime/${item.path}`); 
             $('.modal-content .modalAnimeName').html(`<p>${item.name}</p>`);
 
             // Remove existing click event handlers when the modal opens
