@@ -8,6 +8,7 @@ __email__ = "epicunknown@gmail.com"
 
 import os
 import json
+import oschmod
 
 class Settings:
 
@@ -23,7 +24,7 @@ class Settings:
             # Create the 'config' directory if it doesn't exist
             directory_path = 'config'
             os.makedirs(directory_path, exist_ok=True)
-            os.chown(directory_path, os.getuid(), os.getgid())
+            oschmod.set_mode(directory_path, "777")
 
             # Default settings
             default_settings = {
