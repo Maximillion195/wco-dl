@@ -1,10 +1,47 @@
-# Wco-DL [![GitHub release](https://img.shields.io/github/release/EpicUnknown/wco-dl.svg?style=flat-square)](https://github.com/EpicUnknown/wco-dl/releases/latest) | [![Github All Releases](https://img.shields.io/github/downloads/EpicUnknown/wco-dl/total.svg?style=flat-square)](https://github.com/EpicUnknown/wco-dl/releases)
+# Wco-DL [![GitHub release](https://img.shields.io/github/release/Maximillion195/wco-dl.svg?style=flat-square)](https://github.com/Maximillion195/wco-dl/releases/latest) | [![Github All Releases](https://img.shields.io/github/downloads/Maximillion195/wco-dl/total.svg?style=flat-square)](https://github.com/Maximillion195/wco-dl/releases)
 
-wco-dl is a Command-line program to download cartoons/anime/movies from WCOStream.com.
+wco-dl is a Command-line program and web application to download cartoons/anime/movies from WCOStream.com.
 
-> Downloading and distributing this content may be illegal.This script was written for education purposes purely and you are responsible for its use.
+> Downloading and distributing this content may be illegal. This script was written for education purposes purely and you are responsible for its use.
 
 > Support these cartoon/anime streaming websites by buying a premium account and registering!
+
+## Quick Start with Docker
+
+The easiest way to run WCO-DL is with Docker Compose:
+
+```bash
+# Copy environment file
+cp .env.example .env
+
+# Edit .env with your settings (OUTPUT_DIR at minimum)
+nano .env
+
+# Start the services
+docker-compose up -d
+
+# Access the web interface at http://localhost:3000
+```
+
+See [DOCKER.md](DOCKER.md) for detailed setup instructions.
+
+## Features
+
+- **Web Interface**: Browse and download anime/cartoons with a modern web UI
+- **Command Line**: Download specific episodes or entire series via CLI
+- **Multiple Quality Options**: Supports 480p, 720p, and 1080p downloads
+- **Resume Downloads**: Automatically resumes interrupted downloads
+- **Parallel Downloads**: Download multiple episodes simultaneously
+- **Sonarr Integration**: Automatically import downloaded content to your media library
+- **Content Types**: Download dubbed anime, subbed anime, cartoons, movies, and OVAs
+
+## Architecture
+
+WCO-DL consists of:
+- **Python Backend**: Core scraping and downloading logic
+- **Node.js API Server**: Web API and orchestration layer
+- **Byparr**: Cloudflare bypass service for accessing protected pages
+- **Web UI**: Browse and download from your browser
 
 Please go check out the wiki as it is indepth on what this script does.
 
@@ -38,6 +75,8 @@ This script can run on multiple Operating Systems. But, the script depends on so
 ```
 python3 -m pip install -r requirements.txt
 ```
+
+3.) (Optional) If Cloudflare blocks requests, wco-dl retries them through a [Byparr](https://github.com/ThePhaseless/Byparr) instance. Point it at yours with the `BYPARR_URL` environment variable (default `http://localhost:8191`).
 
 ## Installation
 After installing and setting up all the dependencies in your Operating System, you're good to go and use this script.

@@ -6,6 +6,8 @@ import { join } from 'path';
 import { CacheModule } from '@nestjs/cache-manager';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ScheduledTaskService } from './scheduled-task.service';
+import { DownloadService } from './download.service';
+import { appConfigProvider } from './app-config.provider';
 
 @Module({
   imports: [
@@ -16,7 +18,11 @@ import { ScheduledTaskService } from './scheduled-task.service';
     ScheduleModule.forRoot(),
   ],
   controllers: [AppController],
-  providers: [AppService, ScheduledTaskService],
+  providers: [
+    appConfigProvider,
+    AppService,
+    DownloadService,
+    ScheduledTaskService,
+  ],
 })
 export class AppModule {}
-

@@ -2,14 +2,18 @@
 # -*- coding: utf-8 -*-
 import os
 import re
-from cfscrape import create_scraper
-from requests import session
+import cloudscraper
 from tqdm import tqdm
 
+
+def create_session():
+    # Pin a desktop profile: a random mobile UA gets redirected to m.wcostream.tv, which has a different layout.
+    return cloudscraper.create_scraper(browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False})
+
+
 class Downloader(object):
-    def __init__(self, logger, download_url, backup_url, hidden_url, output, header, user_agent, show_info, settings, quiet):
-        self.sess = session()
-        self.sess = create_scraper(self.sess)
+    def __init__(self, logger, download_url, backup_url, hidden_url, output, header, user_agent, show_info, settings, quiet, session=None):
+        self.sess = session or create_session()
 
         self.show_name = show_info[0]
         self.season = re.search(r'(\d+)', show_info[1]).group(1).zfill(settings.get_setting('seasonPadding'))
@@ -65,9 +69,11 @@ class Downloader(object):
 
     def check_if_downloaded(self, url):
         print('[wco-dl] - Checking if video is already downloaded, this may take some time, you can turn this off in your settings.')
-        if (os.path.exists(self.file_path) and int(os.path.getsize(self.file_path)) == int(self.sess.get(url, headers=self.header).headers["content-length"])):
-            return True
-        return False
+        if not os.path.exists(self.file_path):
+            return False
+        with self.sess.get(url, headers=self.header, stream=True, timeout=60) as response:
+            remote_size = response.headers.get("content-length")
+        return remote_size is not None and int(os.path.getsize(self.file_path)) == int(remote_size)
 
     def start_download(self, url, resume_bytes=None):
         while True:
@@ -80,7 +86,7 @@ class Downloader(object):
                     'Accept': 'video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5',
                     'Accept-Language': 'en-US,en;q=0.5',                                                                                                                      
                     'Connection': 'keep-alive',
-                    'Referer': self.hidden_url.replace('https://wcostream.tv', 'https://www.wcostream.tv'),
+                    'Referer': self.hidden_url,
                     'Range': 'bytes={0}-'.format(resume_bytes),  
                 }
                 dlr = self.sess.get(host_url, stream=True, headers=resume_header)
@@ -100,7 +106,19 @@ class Downloader(object):
                     return
                 return
             else:
-                dlr = self.sess.get(url, stream=True, headers=self.header)  # Downloading the content using python.
+                if not url:
+                    return False
+                try:
+                    dlr = self.sess.get(url, stream=True, headers=self.header, timeout=60)  # Downloading the content using python.
+                except Exception as e:
+                    print('[wco-dl] - Request for {0} failed: {1}'.format(self.file_name, e))
+                    return False
+                content_type = dlr.headers.get('content-type', '')
+                if not dlr.ok or content_type.startswith('text/'):
+                    print('[wco-dl] - {0} returned HTTP {1} ({2}) instead of a video.'.format(
+                        dlr.url, dlr.status_code, content_type or 'unknown content type'))
+                    dlr.close()
+                    return False
                 try: 
                     with open(self.file_path, "wb") as handle:
                         if (self.quiet == 'False'):

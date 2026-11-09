@@ -1,0 +1,65 @@
+# WCO-DL Docker Compose
+# Orchestrates the NestJS server and Byparr for Cloudflare bypass
+
+services:
+  # Main WCO-DL application (NestJS + Python)
+  app:
+    build: .
+    ports:
+      - "${SERVER_PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - SERVER_PORT=${SERVER_PORT:-3000}
+      - BYPARR_URL=http://byparr:8191
+      - SONARR_URL=${SONARR_URL:-}
+      - SONARR_API_KEY=${SONARR_API_KEY:-}
+      - OUTPUT_BASE=${OUTPUT_BASE:-/data/downloads}
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Downloaded files
+      - downloads:${OUTPUT_BASE:-/data/downloads}
+      # Config persistence
+      - config:/app/config
+    depends_on:
+      - byparr
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Byparr - Cloudflare bypass service
+  byparr:
+    image: ghcr.io/thephaseless/byparr:latest
+    environment:
+      - PORT=8191
+      - HOST=0.0.0.0
+      # Optional: proxy configuration
+      - PROXY_SERVER=${PROXY_SERVER:-}
+      - PROXY_USERNAME=${PROXY_USERNAME:-}
+      - PROXY_PASSWORD=${PROXY_PASSWORD:-}
+      # Optional: browser locale and timezone
+      - BROWSER_LOCALE=${BROWSER_LOCALE:-en-US}
+      - BROWSER_TIMEZONE=${BROWSER_TIMEZONE:-UTC}
+    ports:
+      - "${BYPARR_PORT:-8191}:8191"
+    volumes:
+      # Recommended for Byparr performance
+      - byparr_cache:/cache
+    shm_size: "1gb"
+    tmpfs:
+      - /tmp:exec,mode=1777,size=1G
+    restart: unless-stopped
+
+volumes:
+  downloads:
+    driver: local
+  config:
+    driver: local
+  byparr_cache:
+    driver: local

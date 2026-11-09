@@ -1,5 +1,5 @@
 argparse
-cfscrape
+cloudscraper>=1.2.71
 bs4
 tqdm
 urllib3<2

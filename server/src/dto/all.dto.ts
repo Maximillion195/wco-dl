@@ -15,7 +15,7 @@ export class CreateShow {
   @ApiProperty({ required: false })
   episode: string;
 
-  @ApiProperty({ required: false, default: true, example: 'false' })
+  @ApiProperty({ required: false, default: false, example: false })
   newest: boolean = false;
 }
 

@@ -1,6 +1,8 @@
+import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { appConfig } from './config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -13,13 +15,20 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  // Enable CORS for all routes on port 3000
+  // The bundled client is same-origin; CORS only matters for external UIs.
   app.enableCors({
-    origin: 'http://localhost:3000',
+    origin: appConfig.corsOrigin,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
 
-  await app.listen(3000, '0.0.0.0');
+  await app.listen(appConfig.port, '0.0.0.0');
+
+  const logger = new Logger('Bootstrap');
+  logger.log(`Listening on port ${appConfig.port}`);
+  logger.log(`Byparr: ${appConfig.byparrUrl}`);
+  logger.log(
+    `Sonarr: ${appConfig.sonarrUrl}${appConfig.sonarrApiKey ? '' : ' (SONARR_API_KEY not set, imports disabled)'}`,
+  );
 }
 bootstrap();

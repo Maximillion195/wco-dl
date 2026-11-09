@@ -1,27 +1,29 @@
-import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { AppService } from './app.service';
-import { Inject } from '@nestjs/common';
-import { Cache } from 'cache-manager';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Logger } from '@nestjs/common';
+import { CONTENT_TYPES } from './content-list';
 
 @Injectable()
 export class ScheduledTaskService implements OnApplicationBootstrap {
-	constructor(private readonly appService: AppService , @Inject(CACHE_MANAGER) private cacheManager: Cache) { }
-	private readonly logger = new Logger(ScheduledTaskService.name);
+  private readonly logger = new Logger(ScheduledTaskService.name);
 
-	onApplicationBootstrap() {
-		// Code to be executed on application startup
-		this.getAllDubbedAnimes();
-	}
+  constructor(private readonly appService: AppService) {}
 
-	@Cron('0 1 * * *') // Run every day at 1 AM
-	async getAllDubbedAnimes() {
-		this.logger.log('Getting all dubbed animes list');
-		const animePaths = await this.appService.getAllDubbedAnimes()
+  onApplicationBootstrap() {
+    // Not awaited so the server starts listening while the lists load.
+    void this.refreshContentLists();
+  }
 
-		// Store data in cache for future requests
-		await this.cacheManager.set('allDubbedAnimes', animePaths, 172800 * 1000); // Cache for 2 days
-	}
+  @Cron('0 1 * * *') // Run every day at 1 AM
+  async refreshContentLists() {
+    // Sequential, so a single Byparr browser is not flooded with requests.
+    for (const type of CONTENT_TYPES) {
+      this.logger.log(`Refreshing ${type} list`);
+      try {
+        await this.appService.getContentList(type, true);
+      } catch (error) {
+        this.logger.error(`Refreshing ${type} list failed: ${error.message}`);
+      }
+    }
+  }
 }
