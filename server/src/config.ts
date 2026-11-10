@@ -15,6 +15,7 @@ export interface AppConfig {
   puid: string | undefined;
   pgid: string | undefined;
   webhookUrls: string[];
+  webhookAllowInternal: boolean;
 }
 
 function toInt(value: string | undefined, fallback: number): number {
@@ -42,13 +43,15 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       env.OUTPUT_BASE || (isProd ? '/data/torrents/completed' : './output'),
     pythonBin: env.PYTHON_BIN || 'python',
     pythonScript: path.resolve(__dirname, '../../__main__.py'),
-    downloadIdleTimeoutMs: toInt(env.DOWNLOAD_IDLE_TIMEOUT_MS, 150000),
+    // Must outlast a Byparr challenge solve (up to BYPARR_MAX_TIMEOUT_MS) plus retries.
+    downloadIdleTimeoutMs: toInt(env.DOWNLOAD_IDLE_TIMEOUT_MS, 210000),
     puid: env.PUID || undefined,
     pgid: env.PGID || undefined,
     webhookUrls: (env.WEBHOOK_URLS || '')
       .split(',')
       .map((url) => url.trim())
       .filter(Boolean),
+    webhookAllowInternal: env.WEBHOOK_ALLOW_INTERNAL === 'true',
   };
 }
 

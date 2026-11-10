@@ -16,6 +16,12 @@ import { AppConfig } from './config';
 import { WCO_BASE_URL } from './content-list';
 import { BatchDownload, CreateShow } from './dto/all.dto';
 import { ProcessResult, startProcess } from './process-runner';
+import {
+  WebhookTargetError,
+  assertPublicWebhookUrl,
+  guardedHttpAgent,
+  guardedHttpsAgent,
+} from './webhook-target';
 
 const execFileAsync = promisify(execFile);
 
@@ -237,8 +243,9 @@ export class DownloadService {
     return this.jobs.get(id);
   }
 
-  addWebhook(url: unknown): string[] {
+  async addWebhook(url: unknown): Promise<string[]> {
     const valid = validateWebhookUrl(url);
+    await this.assertAllowedWebhookTarget(valid);
     if (this.webhooks.has(valid)) {
       throw new ConflictException(`Webhook ${valid} is already registered`);
     }
@@ -257,6 +264,18 @@ export class DownloadService {
 
   listWebhooks(): string[] {
     return [...this.webhooks];
+  }
+
+  private async assertAllowedWebhookTarget(url: string): Promise<void> {
+    if (this.config.webhookAllowInternal) return;
+    try {
+      await assertPublicWebhookUrl(url);
+    } catch (error) {
+      if (error instanceof WebhookTargetError) {
+        throw new BadRequestException(error.message);
+      }
+      throw error;
+    }
   }
 
   private async startJob(
@@ -342,10 +361,22 @@ export class DownloadService {
       outputFolder: job.outputFolder,
       error: job.error,
     };
+    const guarded = !this.config.webhookAllowInternal;
     await Promise.all(
       this.listWebhooks().map(async (webhook) => {
         try {
-          await axios.post(webhook, payload, { timeout: WEBHOOK_TIMEOUT_MS });
+          // Re-checked on every delivery: WEBHOOK_URLS entries are never
+          // checked at startup, and DNS answers can change after registration.
+          await this.assertAllowedWebhookTarget(webhook);
+          await axios.post(webhook, payload, {
+            timeout: WEBHOOK_TIMEOUT_MS,
+            // A redirect could point the request at an internal address.
+            maxRedirects: 0,
+            ...(guarded && {
+              httpAgent: guardedHttpAgent,
+              httpsAgent: guardedHttpsAgent,
+            }),
+          });
         } catch (error) {
           const message =
             axios.isAxiosError(error) && error.response

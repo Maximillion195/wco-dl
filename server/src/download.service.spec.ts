@@ -2,9 +2,12 @@ import {
   BadRequestException,
   ConflictException,
   InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
+import axios from 'axios';
+import { promises as dnsPromises } from 'dns';
 import { createServer, Server } from 'http';
-import { AddressInfo } from 'net';
+import { AddressInfo, isIP } from 'net';
 import * as path from 'path';
 import { loadConfig } from './config';
 import {
@@ -256,13 +259,21 @@ describe('DownloadService webhooks', () => {
   let received: { path: string; body: unknown }[];
   let onReceive: () => void;
 
+  // Hostnames resolve through this table; IP literals resolve to themselves.
+  let dnsTable: Record<string, string[]>;
+
   beforeAll(async () => {
     receiver = createServer((req, res) => {
       let body = '';
       req.on('data', (chunk) => (body += chunk));
       req.on('end', () => {
-        received.push({ path: req.url, body: JSON.parse(body) });
-        res.statusCode = req.url === '/broken' ? 500 : 204;
+        received.push({ path: req.url, body: JSON.parse(body || 'null') });
+        if (req.url === '/redirect') {
+          res.statusCode = 307;
+          res.setHeader('Location', `${receiverUrl}/redirected`);
+        } else {
+          res.statusCode = req.url === '/broken' ? 500 : 204;
+        }
         res.end();
         onReceive?.();
       });
@@ -277,6 +288,28 @@ describe('DownloadService webhooks', () => {
   beforeEach(() => {
     received = [];
     onReceive = undefined;
+    dnsTable = {
+      'a.test': ['203.0.113.10'],
+      'b.test': ['203.0.113.11'],
+      localhost: ['127.0.0.1'],
+      'metadata.test': ['169.254.169.254'],
+      'mixed.test': ['203.0.113.12', '10.0.0.5'],
+    };
+    jest.spyOn(dnsPromises, 'lookup').mockImplementation((async (
+      hostname: string,
+    ) => {
+      const addresses = isIP(hostname) ? [hostname] : dnsTable[hostname];
+      if (!addresses) {
+        throw Object.assign(new Error(`getaddrinfo ENOTFOUND ${hostname}`), {
+          code: 'ENOTFOUND',
+        });
+      }
+      return addresses.map((address) => ({ address, family: isIP(address) }));
+    }) as never);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   afterAll(async () => {
@@ -289,13 +322,29 @@ describe('DownloadService webhooks', () => {
     });
   }
 
-  it('adds, lists and removes webhooks', () => {
+  async function waitForWebhookError(service: DownloadService, url: string) {
+    const errors = jest.spyOn(Logger.prototype, 'error');
+    const job = await service.startShowDownload({ name: 'naruto' } as never);
+    for (let i = 0; i < 100; i++) {
+      const call = errors.mock.calls.find(([message]) =>
+        String(message).startsWith(`Webhook ${url} failed`),
+      );
+      if (call) {
+        await waitForFinish(service, job);
+        return String(call[0]);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    throw new Error(`No webhook error logged for ${url}`);
+  }
+
+  it('adds, lists and removes webhooks', async () => {
     const service = createService();
     expect(service.listWebhooks()).toEqual([]);
-    expect(service.addWebhook('http://a.test/hook')).toEqual([
+    expect(await service.addWebhook('http://a.test/hook')).toEqual([
       'http://a.test/hook',
     ]);
-    service.addWebhook(' https://b.test/hook ');
+    await service.addWebhook(' https://b.test/hook ');
     expect(service.listWebhooks()).toEqual([
       'http://a.test/hook',
       'https://b.test/hook',
@@ -305,10 +354,10 @@ describe('DownloadService webhooks', () => {
     expect(service.listWebhooks()).toEqual(['https://b.test/hook']);
   });
 
-  it('rejects a webhook that is already registered', () => {
+  it('rejects a webhook that is already registered', async () => {
     const service = createService();
-    service.addWebhook('http://a.test/hook');
-    expect(() => service.addWebhook(' http://a.test/hook ')).toThrow(
+    await service.addWebhook('http://a.test/hook');
+    await expect(service.addWebhook(' http://a.test/hook ')).rejects.toThrow(
       ConflictException,
     );
     expect(service.listWebhooks()).toEqual(['http://a.test/hook']);
@@ -316,12 +365,57 @@ describe('DownloadService webhooks', () => {
 
   it.each(['', 'not a url', 'ftp://a.test/hook', 'file:///etc/passwd', 42])(
     'rejects webhook URL %p',
-    (url) => {
-      expect(() => createService().addWebhook(url)).toThrow(
+    async (url) => {
+      await expect(createService().addWebhook(url)).rejects.toThrow(
         BadRequestException,
       );
     },
   );
+
+  it.each([
+    'http://127.0.0.1/hook',
+    'http://127.1.2.3:8080/hook',
+    'http://2130706433/hook',
+    'http://localhost:3000/hook',
+    'http://0.0.0.0/hook',
+    'http://169.254.169.254/latest/meta-data/',
+    'http://metadata.test/hook',
+    'http://10.0.0.1/hook',
+    'http://172.16.0.1/hook',
+    'http://172.31.255.255/hook',
+    'http://192.168.1.10/hook',
+    'http://[::1]/hook',
+    'http://[::ffff:127.0.0.1]/hook',
+    'http://[fd00::1]/hook',
+    'http://[fe80::1]/hook',
+    'http://mixed.test/hook',
+  ])('blocks internal webhook target %s', async (url) => {
+    const service = createService();
+    await expect(service.addWebhook(url)).rejects.toThrow(
+      /resolves to internal address/,
+    );
+    expect(service.listWebhooks()).toEqual([]);
+  });
+
+  it.each(['http://172.32.0.1/hook', 'http://203.0.113.10/hook'])(
+    'allows public webhook target %s',
+    async (url) => {
+      await expect(createService().addWebhook(url)).resolves.toEqual([url]);
+    },
+  );
+
+  it('rejects webhook hosts that do not resolve', async () => {
+    await expect(
+      createService().addWebhook('http://nowhere.test/hook'),
+    ).rejects.toThrow(/Could not resolve webhook host nowhere.test: ENOTFOUND/);
+  });
+
+  it('allows internal webhook targets with WEBHOOK_ALLOW_INTERNAL', async () => {
+    const service = createService({ webhookAllowInternal: true });
+    await service.addWebhook('http://192.168.1.10:8123/api/webhook/x');
+    await service.addWebhook('http://localhost:3000/hook');
+    expect(service.listWebhooks()).toHaveLength(2);
+  });
 
   it('seeds webhooks from config and skips invalid entries', () => {
     const service = createService({
@@ -330,10 +424,59 @@ describe('DownloadService webhooks', () => {
     expect(service.listWebhooks()).toEqual(['http://a.test/hook']);
   });
 
-  it('posts the finished job to every webhook', async () => {
+  it('never delivers to internal webhooks seeded from config', async () => {
+    const url = `${receiverUrl}/seeded`;
+    const post = jest.spyOn(axios, 'post');
+    const service = createService({ webhookUrls: [url] });
+
+    expect(await waitForWebhookError(service, url)).toMatch(
+      /resolves to internal address 127\.0\.0\.1/,
+    );
+    expect(post).not.toHaveBeenCalledWith(
+      url,
+      expect.anything(),
+      expect.anything(),
+    );
+    expect(received).toEqual([]);
+  });
+
+  it('blocks a host that re-resolves to an internal address before delivery', async () => {
     const service = createService();
-    service.addWebhook(`${receiverUrl}/one`);
-    service.addWebhook(`${receiverUrl}/two`);
+    const { port } = receiver.address() as AddressInfo;
+    const url = `http://rebind.test:${port}/hook`;
+    dnsTable['rebind.test'] = ['203.0.113.20'];
+    await service.addWebhook(url);
+
+    // The pre-delivery check still sees the public address; the connection's
+    // own lookup then gets the rebound one.
+    jest
+      .mocked(dnsPromises.lookup)
+      .mockImplementationOnce((async () => [
+        { address: '203.0.113.20', family: 4 },
+      ]) as never)
+      .mockImplementationOnce((async () => [
+        { address: '127.0.0.1', family: 4 },
+      ]) as never);
+
+    expect(await waitForWebhookError(service, url)).toMatch(
+      /resolves to internal address 127\.0\.0\.1/,
+    );
+    expect(received).toEqual([]);
+  });
+
+  it('does not follow webhook redirects', async () => {
+    const service = createService({ webhookAllowInternal: true });
+    const url = `${receiverUrl}/redirect`;
+    await service.addWebhook(url);
+
+    expect(await waitForWebhookError(service, url)).toMatch(/HTTP 307/);
+    expect(received.map((r) => r.path)).toEqual(['/redirect']);
+  });
+
+  it('posts the finished job to every webhook', async () => {
+    const service = createService({ webhookAllowInternal: true });
+    await service.addWebhook(`${receiverUrl}/one`);
+    await service.addWebhook(`${receiverUrl}/two`);
     const delivered = waitForWebhooks(2);
 
     const job = await service.startShowDownload({ name: 'fail-me' } as never);
@@ -351,10 +494,10 @@ describe('DownloadService webhooks', () => {
   });
 
   it('keeps the job result when a webhook fails', async () => {
-    const service = createService();
-    service.addWebhook('http://127.0.0.1:1/unreachable');
-    service.addWebhook(`${receiverUrl}/broken`);
-    service.addWebhook(`${receiverUrl}/ok`);
+    const service = createService({ webhookAllowInternal: true });
+    await service.addWebhook('http://127.0.0.1:1/unreachable');
+    await service.addWebhook(`${receiverUrl}/broken`);
+    await service.addWebhook(`${receiverUrl}/ok`);
     const delivered = waitForWebhooks(2);
 
     const job = await service.startShowDownload({ name: 'naruto' } as never);

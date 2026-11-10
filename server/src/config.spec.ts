@@ -38,6 +38,23 @@ describe('loadConfig', () => {
     ).toEqual(['http://a.test/hook', 'https://b.test']);
   });
 
+  it('blocks internal webhooks unless WEBHOOK_ALLOW_INTERNAL=true', () => {
+    expect(loadConfig({}).webhookAllowInternal).toBe(false);
+    expect(
+      loadConfig({ WEBHOOK_ALLOW_INTERNAL: '1' }).webhookAllowInternal,
+    ).toBe(false);
+    expect(
+      loadConfig({ WEBHOOK_ALLOW_INTERNAL: 'true' }).webhookAllowInternal,
+    ).toBe(true);
+  });
+
+  it('gives downloads 3.5 minutes of silence before killing them', () => {
+    expect(loadConfig({}).downloadIdleTimeoutMs).toBe(210000);
+    expect(
+      loadConfig({ DOWNLOAD_IDLE_TIMEOUT_MS: '60000' }).downloadIdleTimeoutMs,
+    ).toBe(60000);
+  });
+
   it('falls back to the default port for invalid values', () => {
     expect(loadConfig({ SERVER_PORT: 'abc' }).port).toBe(3000);
   });

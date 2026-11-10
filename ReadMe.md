@@ -1,6 +1,6 @@
 # Wco-DL [![GitHub release](https://img.shields.io/github/release/Maximillion195/wco-dl.svg?style=flat-square)](https://github.com/Maximillion195/wco-dl/releases/latest) | [![Github All Releases](https://img.shields.io/github/downloads/Maximillion195/wco-dl/total.svg?style=flat-square)](https://github.com/Maximillion195/wco-dl/releases)
 
-wco-dl is a Command-line program and web application to download cartoons/anime/movies from WCOStream.com.
+wco-dl is a Command-line program and web application to download cartoons/anime/movies from WCOStream.tv.
 
 > Downloading and distributing this content may be illegal. This script was written for education purposes purely and you are responsible for its use.
 
@@ -14,13 +14,14 @@ The easiest way to run WCO-DL is with Docker Compose:
 # Copy environment file
 cp .env.example .env
 
-# Edit .env with your settings (OUTPUT_DIR at minimum)
+# Edit .env with your settings (OUTPUT_BASE at minimum)
 nano .env
 
 # Start the services
-docker-compose up -d
+docker compose up -d
 
 # Access the web interface at http://localhost:3000
+# Swagger API docs are at http://localhost:3000/api
 ```
 
 See [DOCKER.md](DOCKER.md) for detailed setup instructions.
@@ -29,7 +30,7 @@ See [DOCKER.md](DOCKER.md) for detailed setup instructions.
 
 - **Web Interface**: Browse and download anime/cartoons with a modern web UI
 - **Command Line**: Download specific episodes or entire series via CLI
-- **Multiple Quality Options**: Supports 480p, 720p, and 1080p downloads
+- **Multiple Quality Options**: Supports 480p, 720p, and 1080p downloads for whole shows (single episodes, movies and OVAs downloaded through the web UI or API are 480p only; see [Web API](#web-api))
 - **Resume Downloads**: Automatically resumes interrupted downloads
 - **Parallel Downloads**: Download multiple episodes simultaneously
 - **Sonarr Integration**: Automatically import downloaded content to your media library
@@ -39,29 +40,42 @@ See [DOCKER.md](DOCKER.md) for detailed setup instructions.
 
 ## What's New
 
+- **Modern Web UI**: Tabs for Dubbed Anime, Subbed Anime, Cartoons, Movies and OVAs, real-time search with match highlighting, and a dark/light theme toggle that remembers your choice.
+- **Cloudflare Handling**: [cloudscraper](https://github.com/VeNoMouS/cloudscraper) replaces the unmaintained `cfscrape`. When cloudscraper can't solve a challenge, requests are retried through [Byparr](https://github.com/ThePhaseless/Byparr), which the Docker setup runs for you.
+- **Video Extraction Fix**: Video links are now requested with the same User-Agent that fetched them, including after a Byparr fallback. WCO rejects mismatched User-Agents with a `404`, which used to break downloads.
 - **Quality Selection**: Choose 480p, 720p, or 1080p from the web UI or with the `quality` API parameter (default `720`). `480` downloads the SD stream; `720` and `1080` both request the best HD stream WCO offers for that episode.
 - **Batch Downloads**: The web UI lets you select multiple shows and download them together. The API equivalent is `POST /download-batch` (up to 50 names per request). Every name is validated before any download starts, so one typo won't leave half a batch running.
 - **Webhook Notifications**: Register webhook URLs that receive a POST when a download finishes, whether it completed, failed, or timed out. Webhooks can be managed through the API or preset with the `WEBHOOK_URLS` environment variable (comma-separated). Up to 20 can be registered.
 - **Enhanced Download Queue**: The web UI queue shows a status icon per download (running, completed, failed, timed out), progress details, and the error message when something goes wrong.
 - **Subbed Anime Support**: Downloads started from the Subbed tab now fetch the subbed episodes. The API takes a `language` parameter (`sub` or `dub`).
 - **Bug Fixes**:
-  - The Python downloader now exits with code `1` when a download fails (invalid link, no episodes found, or an episode that couldn't be downloaded), so the server and scripts can detect failures.
+  - The Python downloader now exits with code `1` when a download fails (invalid link, no episodes found, or an episode that couldn't be downloaded), so the server and scripts can detect failures. Episodes only available to WCO Premium users are skipped without failing the run; the summary line reports both counts, e.g. `10 episode(s) downloaded, 2 premium-only skipped`.
   - Titles that start with a digit, such as `1-happy-family-usa`, are now recognised.
 
 ## Web API
 
 The Node.js server (port 3000 by default) exposes these endpoints. Download requests return `202 Accepted` immediately with a job object; poll `GET /downloads/:id` to follow it.
 
+Interactive Swagger docs for every endpoint are served at `GET /api`.
+
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
+| `GET` | `/get-all-dubbed-anime-names` | List all dubbed anime |
+| `GET` | `/get-all-subbed-anime-names` | List all subbed anime |
+| `GET` | `/get-all-cartoon-names` | List all cartoons |
+| `GET` | `/get-all-movie-names` | List all movies |
+| `GET` | `/get-all-ova-names` | List all OVAs |
+| `GET` | `/get-website` | Get the WCO site URL the server downloads from |
 | `POST` | `/download-anime` | Download a whole show |
 | `POST` | `/download-batch` | Download several shows at once |
-| `POST` | `/download-single-episode` | Download one episode |
+| `POST` | `/download-single-episode` | Download one episode, movie or OVA (480p only) |
+| `POST` | `/process-anime` | Ask Sonarr to import a show's download folder |
 | `GET` | `/downloads` | List download jobs |
 | `GET` | `/downloads/:id` | Get one download job |
 | `GET` | `/webhooks` | List registered webhooks |
 | `POST` | `/webhooks` | Register a webhook |
 | `DELETE` | `/webhooks/:url` | Remove a webhook |
+| `GET` | `/api` | Swagger API docs |
 
 The `/download-anime` and `/download-batch` requests accept these optional parameters:
 
@@ -99,12 +113,20 @@ curl -X POST http://localhost:3000/download-batch \
 
 This returns an array of job objects, one per show.
 
-**Download a single episode:**
+**Download a single episode** (also used for movies and OVAs). This endpoint only takes a `name`, ignores `quality`, and always downloads the 480p SD stream; for 720p or 1080p use `/download-anime` with an `episode` range instead:
 
 ```bash
 curl -X POST http://localhost:3000/download-single-episode \
   -H 'Content-Type: application/json' \
   -d '{"name": "cool-show-name-here-episode-2-english-dubbed"}'
+```
+
+**Trigger a Sonarr import** of a show's download folder (needs `SONARR_URL` and `SONARR_API_KEY`):
+
+```bash
+curl -X POST http://localhost:3000/process-anime \
+  -H 'Content-Type: application/json' \
+  -d '{"name": "cool-show-name-here"}'
 ```
 
 **Register a webhook** (must be an `http` or `https` URL; returns `201` with the full list, or `409` if the URL is already registered):
@@ -124,7 +146,8 @@ curl http://localhost:3000/webhooks
 **Remove a webhook.** The URL must be percent-encoded so it fits in one path segment (`encodeURIComponent` in JavaScript). Returns `204` on success or `404` if it wasn't registered:
 
 ```bash
-curl -X DELETE http://localhost:3000/webhooks/http%3A%2F%2Fexample.com%2Fhook
+curl -X DELETE http://localhost:3000/webhooks/http%3A%2F%2Fexample.com%2Fhook \
+  -H 'Content-Type: application/json'
 ```
 
 When a download finishes, each webhook receives a JSON POST like this (`status` is `completed`, `failed`, or `timed_out`; `error` is only set when it didn't complete):
@@ -135,12 +158,32 @@ When a download finishes, each webhook receives a JSON POST like this (`status` 
   "name": "cool-show-name-here",
   "status": "failed",
   "url": "https://www.wcostream.tv/anime/cool-show-name-here",
-  "outputFolder": "/downloads/cool-show-name-here/",
+  "outputFolder": "/data/downloads/cool-show-name-here/",
   "error": "Process exited with code 1"
 }
 ```
 
-Webhook calls time out after 10 seconds, and a failing webhook is logged without affecting the download.
+Webhook calls time out after 10 seconds, don't follow redirects, and a failing webhook is logged without affecting the download.
+
+`POST /webhooks` and `DELETE /webhooks/:url` require `Content-Type: application/json` (other types get `415`) and reject requests whose `Origin` is neither `CORS_ORIGIN` nor the server itself (`403`).
+
+Webhook URLs that resolve to loopback (`127.0.0.0/8`, `::1`), link-local (`169.254.0.0/16`, including cloud metadata endpoints) or private (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `fc00::/7`) addresses are rejected with `400`, and are checked again before every delivery. To send webhooks to services on your LAN, such as Home Assistant, set `WEBHOOK_ALLOW_INTERNAL=true`.
+
+## Environment Variables
+
+The server is configured through environment variables, set in `.env` when using Docker Compose. The main ones are listed below; see [DOCKER.md](DOCKER.md#environment-variables) and [`.env.example`](.env.example) for the full list, including the Byparr proxy and browser settings.
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `OUTPUT_BASE` | Where downloads are saved; each show gets its own folder inside it | `/data/downloads` (Docker) |
+| `SERVER_PORT` | Web UI and API port | `3000` |
+| `CORS_ORIGIN` | Origin allowed to call the API from a browser | `http://localhost:3000` |
+| `BYPARR_URL` | Byparr instance used for Cloudflare bypass (also read by the Python CLI) | `http://localhost:8191`; `http://byparr:8191` in Docker |
+| `SONARR_URL` / `SONARR_API_KEY` | Sonarr import after each download; leave the key empty to disable | Unset |
+| `DOWNLOAD_IDLE_TIMEOUT_MS` | Kill a download that produces no output for this long | `210000` |
+| `WEBHOOK_URLS` | Comma-separated webhook URLs registered at startup | Unset |
+| `WEBHOOK_ALLOW_INTERNAL` | Allow webhooks to loopback, link-local and private addresses | `false` |
+| `PUID` / `PGID` | Owner of downloaded files | `1000` |
 
 ## Architecture
 
@@ -150,24 +193,28 @@ WCO-DL consists of:
 - **Byparr**: Cloudflare bypass service for accessing protected pages
 - **Web UI**: Browse and download from your browser
 
-Please go check out the wiki as it is indepth on what this script does.
+Please go check out the wiki as it is in-depth on what this script does.
 
 ## Table of Contents
 
-* [To-Do](#to-do)
+* [Quick Start with Docker](#quick-start-with-docker)
+* [Features](#features)
 * [What's New](#whats-new)
 * [Web API](#web-api)
+* [Environment Variables](#environment-variables)
+* [Architecture](#architecture)
 * [Dependencies Installation](#dependencies-installation)
 * [Installation](#installation)
 * [Python Support](#python-support)
 * [Windows Binary](#windows-binary)
 * [List of Arguments](#list-of-arguments)
+    * [Examples](#examples)
+    * [Batch file format](#batch-file-format)
 * [Usage](#usage)
     * [Windows](#windows)
     * [Linux/Debian](#linuxdebian)
     * [Example Commands](#example-commands)
     * [Example URLs](#example-urls)
-* [Features](#features)
 * [Opening An Issue/Requesting A Site](#opening-an-issuerequesting-a-site)
     * [Reporting Issues](#reporting-issues)
     * [Suggesting A Feature](#suggesting-a-feature)
@@ -189,11 +236,11 @@ python3 -m pip install -r requirements.txt
 
 ## Installation
 After installing and setting up all the dependencies in your Operating System, you're good to go and use this script.
-The instructions for all the OS would remain same. Download this reposititory and put it somewhere in your system.
+The instructions for all the OS would remain same. Download this repository and put it somewhere in your system.
 
 **Windows users**, it's better to not place it places where it requires administrator privileges. Good example of places to avoid would be `C:\Windows` etc.. This goes for both, the Python script and the windows binary file (.exe).
 
-**Linux/Debian** users make sure that this script is executable.Just run this command, if you run into problem(s) :
+**Linux/Debian** users make sure that this script is executable. Just run this command, if you run into problem(s) :
 
 `chmod +x __main__.py`
 

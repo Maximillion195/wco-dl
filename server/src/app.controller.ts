@@ -8,6 +8,7 @@ import {
   NotFoundException,
   Param,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import { AppService } from './app.service';
 import { ContentItem } from './content-list';
@@ -24,6 +25,7 @@ import {
   SingleEpisodeReq,
   WebhookReq,
 } from './dto/all.dto';
+import { JsonRequestGuard } from './json-request.guard';
 
 @Controller()
 export class AppController {
@@ -110,13 +112,15 @@ export class AppController {
   }
 
   @Post('webhooks')
+  @UseGuards(JsonRequestGuard)
   @HttpCode(HttpStatus.CREATED)
-  addWebhook(@Body() body: WebhookReq): string[] {
+  addWebhook(@Body() body: WebhookReq): Promise<string[]> {
     return this.downloadService.addWebhook(body?.url);
   }
 
   // The URL must be percent-encoded (encodeURIComponent) to fit in one path segment.
   @Delete('webhooks/:url')
+  @UseGuards(JsonRequestGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   removeWebhook(@Param('url') url: string): void {
     if (!this.downloadService.removeWebhook(url)) {

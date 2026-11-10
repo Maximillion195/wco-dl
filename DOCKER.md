@@ -72,7 +72,11 @@ This guide covers running WCO-DL with Docker Compose, which includes:
 **Advanced:**
 - `PYTHON_BIN`: Python binary path (default: `python`)
 - `BYPARR_MAX_TIMEOUT_MS`: Byparr request timeout (default: `60000`)
-- `DOWNLOAD_IDLE_TIMEOUT_MS`: Download idle timeout (default: `150000`)
+- `DOWNLOAD_IDLE_TIMEOUT_MS`: Download idle timeout (default: `210000`)
+
+**Webhooks:**
+- `WEBHOOK_URLS`: Comma-separated webhook URLs registered at startup
+- `WEBHOOK_ALLOW_INTERNAL`: Set to `true` to allow webhooks to loopback, link-local and private LAN addresses, which are blocked by default (default: `false`)
 
 ## Usage Examples
 

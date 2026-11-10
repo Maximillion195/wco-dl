@@ -8,6 +8,7 @@ import time
 import base64
 import logging
 import secrets
+import threading
 import requests
 import urllib3
 from urllib.parse import urljoin, urlsplit, urlunsplit, parse_qs, urlencode, quote
@@ -54,7 +55,11 @@ class Lifter(object):
         self.threads = threads
         self.original_thread = self.threads
         self.quiet = quiet
+        self.downloaded = 0
         self.download_errors = 0
+        # Premium-only episodes can't be downloaded at all, so they aren't errors.
+        self.skipped_premium = 0
+        self._count_lock = threading.Lock()
         
         if output is None:
             self.output = ""
@@ -88,6 +93,8 @@ class Lifter(object):
                 # We are downloading a single episode
                 print('Downloading single')
                 self.download_single(url, extra)
+            print('[wco-dl] - {0} episode(s) downloaded, {1} premium-only skipped.'.format(
+                self.downloaded, self.skipped_premium))
             if self.download_errors > 0:
                 print('[wco-dl] - {0} episode(s) failed to download.'.format(self.download_errors))
                 sys.exit(1)
@@ -239,10 +246,10 @@ class Lifter(object):
         except Exception as e:
             print('[wco-dl] - Could not find a video for {0}: {1}'.format(url, e))
             log.debug('Failed to resolve %s', url, exc_info=True)
-            self.download_errors += 1
+            self._count('download_errors')
             return
         if resolved is None:
-            self.download_errors += 1
+            self._count('skipped_premium')
             return
         source_urls, backup_url, hidden_url = resolved
         download_url = self.select_download_url(source_urls)
@@ -263,8 +270,12 @@ class Lifter(object):
         downloader = Downloader(logger=self.logger, download_url=download_url, backup_url=backup_url,
                                 hidden_url=hidden_url, output=output, header=download_header, user_agent=user_agent,
                                 show_info=show_info, settings=self.settings, quiet=self.quiet, session=self.session)
-        if downloader.failed:
-            self.download_errors += 1
+        self._count('download_errors' if downloader.failed else 'downloaded')
+
+    def _count(self, counter):
+        # Episodes are downloaded from several threads (-t).
+        with self._count_lock:
+            setattr(self, counter, getattr(self, counter) + 1)
 
     def _decode_iframe(self, encoded_iframe):
         array = encoded_iframe[encoded_iframe.find("[") + 1:encoded_iframe.find("]")].split(', ')
@@ -338,7 +349,7 @@ class Lifter(object):
         links = self.extract_episode_links(soup, page.url or url)
         if not links:
             print('[wco-dl] - No episodes found on {0} (HTTP {1}).'.format(url, page.status_code))
-            self.download_errors += 1
+            self._count('download_errors')
             return
     
         if self.exclude is not None:

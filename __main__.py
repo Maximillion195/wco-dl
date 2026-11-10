@@ -109,7 +109,8 @@ class Main:
 
         if args.batch:
             failed_shows = 0
-            with open(args.batch[0], 'r') as anime_list:
+            # utf-8-sig also strips the BOM Windows Notepad adds.
+            with open(args.batch[0], 'r', encoding='utf-8-sig') as anime_list:
                 entries = [line.strip() for line in anime_list]
             for entry in entries:
                 if not entry or entry.startswith('#'):
@@ -123,6 +124,10 @@ class Main:
                 except SystemExit as e:
                     if e.code:
                         failed_shows += 1
+                except Exception as e:
+                    print('[wco-dl] - {0} failed: {1}'.format(url, e))
+                    logging.debug('Batch entry %s failed', url, exc_info=True)
+                    failed_shows += 1
             print('Done')
             sys.exit(1 if failed_shows else 0)
 
@@ -137,6 +142,10 @@ class Main:
                 except SystemExit as e:
                     if e.code:
                         failed_shows += 1
+                except Exception as e:
+                    print('[wco-dl] - Updating {0} failed: {1}'.format(x, e))
+                    logging.debug('Update of %s failed', x, exc_info=True)
+                    failed_shows += 1
             print('Done')
             sys.exit(1 if failed_shows else 0)
 

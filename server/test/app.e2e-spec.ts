@@ -232,7 +232,8 @@ describe('AppController (e2e)', () => {
   });
 
   it('manages webhooks', async () => {
-    const hook = 'http://127.0.0.1:9/hook?token=a/b';
+    // TEST-NET-3 literal: public, and needs no DNS.
+    const hook = 'http://203.0.113.10:9/hook?token=a/b';
     await request(app.getHttpServer()).get('/webhooks').expect(200, []);
     await request(app.getHttpServer())
       .post('/webhooks')
@@ -252,11 +253,88 @@ describe('AppController (e2e)', () => {
     await request(app.getHttpServer()).get('/webhooks').expect(200, [hook]);
     await request(app.getHttpServer())
       .delete(`/webhooks/${encodeURIComponent(hook)}`)
+      .set('Content-Type', 'application/json')
       .expect(204);
     await request(app.getHttpServer())
       .delete(`/webhooks/${encodeURIComponent(hook)}`)
+      .set('Content-Type', 'application/json')
       .expect(404);
     await request(app.getHttpServer()).get('/webhooks').expect(200, []);
+  });
+
+  describe('webhook CSRF protection', () => {
+    const hook = 'http://203.0.113.10/csrf';
+
+    afterEach(async () => {
+      await request(app.getHttpServer())
+        .delete(`/webhooks/${encodeURIComponent(hook)}`)
+        .set('Content-Type', 'application/json');
+    });
+
+    it.each([
+      ['form-encoded', 'application/x-www-form-urlencoded', `url=${hook}`],
+      ['multipart', 'multipart/form-data; boundary=x', `--x\r\n--x--`],
+      ['text/plain', 'text/plain', JSON.stringify({ url: hook })],
+    ])('rejects a %s POST /webhooks with 415', async (_, type, body) => {
+      await request(app.getHttpServer())
+        .post('/webhooks')
+        .set('Content-Type', type)
+        .send(body)
+        .expect(415);
+      await request(app.getHttpServer()).get('/webhooks').expect(200, []);
+    });
+
+    it('rejects DELETE /webhooks/:url without a JSON content type', async () => {
+      await request(app.getHttpServer())
+        .post('/webhooks')
+        .send({ url: hook })
+        .expect(201);
+      await request(app.getHttpServer())
+        .delete(`/webhooks/${encodeURIComponent(hook)}`)
+        .expect(415);
+      await request(app.getHttpServer())
+        .delete(`/webhooks/${encodeURIComponent(hook)}`)
+        .set('Content-Type', 'application/x-www-form-urlencoded')
+        .expect(415);
+      await request(app.getHttpServer()).get('/webhooks').expect(200, [hook]);
+    });
+
+    it('rejects requests from a foreign Origin with 403', async () => {
+      await request(app.getHttpServer())
+        .post('/webhooks')
+        .set('Origin', 'https://evil.example')
+        .send({ url: hook })
+        .expect(403);
+      await request(app.getHttpServer()).get('/webhooks').expect(200, []);
+    });
+
+    it('accepts the configured CORS origin and same-host origins', async () => {
+      await request(app.getHttpServer())
+        .post('/webhooks')
+        .set('Origin', loadConfig({}).corsOrigin)
+        .send({ url: hook })
+        .expect(201);
+      await request(app.getHttpServer())
+        .delete(`/webhooks/${encodeURIComponent(hook)}`)
+        .set('Host', '192.168.1.5:3000')
+        .set('Origin', 'http://192.168.1.5:3000')
+        .set('Content-Type', 'application/json; charset=utf-8')
+        .expect(204);
+    });
+
+    it('rejects internal webhook targets with 400', async () => {
+      for (const url of [
+        'http://127.0.0.1:8989/api',
+        'http://169.254.169.254/latest/meta-data/',
+        'http://192.168.1.1/',
+      ]) {
+        const res = await request(app.getHttpServer())
+          .post('/webhooks')
+          .send({ url })
+          .expect(400);
+        expect(res.body.message).toMatch(/resolves to internal address/);
+      }
+    });
   });
 
   it('returns 404 for unknown downloads', async () => {
