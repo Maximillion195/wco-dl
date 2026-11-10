@@ -14,6 +14,7 @@ def create_session():
 class Downloader(object):
     def __init__(self, logger, download_url, backup_url, hidden_url, output, header, user_agent, show_info, settings, quiet, session=None):
         self.sess = session or create_session()
+        self.failed = False
 
         self.show_name = show_info[0]
         self.season = re.search(r'(\d+)', show_info[1]).group(1).zfill(settings.get_setting('seasonPadding'))
@@ -61,6 +62,7 @@ class Downloader(object):
                         f_path = os.path.dirname(os.path.realpath(__file__)) + os.sep
                         with open(f_path + "failed.txt", "a+") as failed: 
                             failed.write("{0},{1},{2}".format(self.file_name, self.output, show_info[4]))
+                        self.failed = True
                         break
                     else:
                         break

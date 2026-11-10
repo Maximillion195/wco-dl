@@ -10,7 +10,7 @@ import logging
 import secrets
 import requests
 import urllib3
-from urllib.parse import urljoin, urlsplit, parse_qs, urlencode, quote
+from urllib.parse import urljoin, urlsplit, urlunsplit, parse_qs, urlencode, quote
 from bs4 import BeautifulSoup
 from cloudscraper.exceptions import CloudflareException
 from Byparr import Byparr, ByparrError
@@ -33,7 +33,13 @@ AD_GATE_WAIT = 11
 
 class Lifter(object):
 
-    def __init__(self, url, resolution, logger, season, ep_range, exclude, output, newest, settings, database, quiet,update=False, threads=None):
+    def __init__(self, url, resolution, logger, season, ep_range, exclude, output, newest, settings, database, quiet,update=False, threads=None, language=None):
+        if language:
+            if '/anime/' in urlsplit(url).path:
+                url = self.with_language(url, language)
+            else:
+                print('[wco-dl] - --lang only applies to show URLs, ignoring it for {0}'.format(url))
+
         # Define our variables
         self.url = url
         self.resolution = resolution
@@ -48,6 +54,7 @@ class Lifter(object):
         self.threads = threads
         self.original_thread = self.threads
         self.quiet = quiet
+        self.download_errors = 0
         
         if output is None:
             self.output = ""
@@ -81,10 +88,13 @@ class Lifter(object):
                 # We are downloading a single episode
                 print('Downloading single')
                 self.download_single(url, extra)
+            if self.download_errors > 0:
+                print('[wco-dl] - {0} episode(s) failed to download.'.format(self.download_errors))
+                sys.exit(1)
         else:
             # Not a valid wcostream link
             print(extra)
-            sys.exit()
+            sys.exit(1)
 
     def check_output(self, anime_name):
         output_directory = os.path.abspath("Output" + os.sep + str(anime_name) + os.sep)
@@ -229,8 +239,10 @@ class Lifter(object):
         except Exception as e:
             print('[wco-dl] - Could not find a video for {0}: {1}'.format(url, e))
             log.debug('Failed to resolve %s', url, exc_info=True)
+            self.download_errors += 1
             return
         if resolved is None:
+            self.download_errors += 1
             return
         source_urls, backup_url, hidden_url = resolved
         download_url = self.select_download_url(source_urls)
@@ -248,9 +260,11 @@ class Lifter(object):
             'Connection': 'keep-alive',
         }
 
-        Downloader(logger=self.logger, download_url=download_url, backup_url=backup_url, hidden_url=hidden_url,
-                   output=output, header=download_header, user_agent=user_agent, show_info=show_info,
-                   settings=self.settings, quiet=self.quiet, session=self.session)
+        downloader = Downloader(logger=self.logger, download_url=download_url, backup_url=backup_url,
+                                hidden_url=hidden_url, output=output, header=download_header, user_agent=user_agent,
+                                show_info=show_info, settings=self.settings, quiet=self.quiet, session=self.session)
+        if downloader.failed:
+            self.download_errors += 1
 
     def _decode_iframe(self, encoded_iframe):
         array = encoded_iframe[encoded_iframe.find("[") + 1:encoded_iframe.find("]")].split(', ')
@@ -293,6 +307,13 @@ class Lifter(object):
         return links
 
     @staticmethod
+    def with_language(url, language):
+        parts = urlsplit(url)
+        query = parse_qs(parts.query, keep_blank_values=True)
+        query['lang'] = [language]
+        return urlunsplit(parts._replace(query=urlencode(query, doseq=True)))
+
+    @staticmethod
     def language_filter(page_url, anchors):
         """Pick which data-lang to keep when a show page lists both dubbed and subbed episodes."""
         langs = {a.get('data-lang') for a in anchors if a.get('data-lang')}
@@ -317,6 +338,7 @@ class Lifter(object):
         links = self.extract_episode_links(soup, page.url or url)
         if not links:
             print('[wco-dl] - No episodes found on {0} (HTTP {1}).'.format(url, page.status_code))
+            self.download_errors += 1
             return
     
         if self.exclude is not None:
@@ -429,10 +451,10 @@ class Lifter(object):
         url = re.sub(r'^https?://[^/]+/', '', url)
         try:
             if "season" in url:
-                show_name, season, episode, desc = re.findall(r'([a-zA-Z0-9].+)\s(season\s\d+\s?)(episode\s\d+\s)?(.+)',
+                show_name, season, episode, desc = re.findall(r'([a-zA-Z0-9].*)\s(season\s\d+\s?)(episode\s\d+\s)?(.+)',
                                                               url.replace('-', ' '))[0]
             else:
-                show_name, episode, desc = re.findall(r'([a-zA-Z0-9].+)\s(episode\s\d+\s?)(.+)', url.replace(
+                show_name, episode, desc = re.findall(r'([a-zA-Z0-9].*)\s(episode\s\d+\s?)(.+)', url.replace(
                     '-', ' '))[0]
                 season = "season 1"
         except:
@@ -442,8 +464,9 @@ class Lifter(object):
             desc = ""
         return show_name.title().strip(), season.title().strip(), episode.title().strip(), desc.title().strip(), url
 
-    def is_valid(self, url):
-        website = re.findall('https://(www.)?wcostream.tv/(anime/)?([a-zA-Z].+$)?', url)
+    @staticmethod
+    def is_valid(url):
+        website = re.findall('https://(www.)?wcostream.tv/(anime/)?([a-zA-Z0-9].+$)?', url)
         if website:
             if website[0][1] == "anime/":
                 return True, (website[0][1], website[0][2])

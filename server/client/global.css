@@ -352,7 +352,8 @@ header h1 {
   color: var(--text-primary);
 }
 
-.form-group input {
+.form-group input,
+.form-group select {
   width: 100%;
   padding: 0.75rem;
   font-size: 1rem;
@@ -363,7 +364,12 @@ header h1 {
   transition: all 0.2s ease;
 }
 
-.form-group input:focus {
+.form-group select {
+  cursor: pointer;
+}
+
+.form-group input:focus,
+.form-group select:focus {
   outline: none;
   border-color: var(--accent-color);
   background: var(--bg-primary);
@@ -415,6 +421,17 @@ header h1 {
 
 .btn-secondary:hover {
   background: var(--bg-tertiary);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-small {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
 }
 
 /* Utility Classes */
@@ -490,8 +507,98 @@ header h1 {
   color: var(--accent-color);
 }
 
-/* Downloads */
-.downloads {
+/* Toolbar */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+/* Keeps the batch controls reachable while scrolling through the results. */
+.toolbar.batch-active {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 0.75rem 0;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.batch-quality {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.batch-quality select {
+  padding: 0.5rem;
+  font-size: 0.9rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.batch-quality select:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+#batch-toggle-btn[aria-pressed="true"] {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+/* Batch selection */
+.card-checkbox {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  accent-color: var(--accent-color);
+  /* The card handles the click so the checkbox never toggles itself. */
+  pointer-events: none;
+}
+
+.batch-mode .anime-card {
+  padding-right: 2.5rem;
+}
+
+.anime-card.selected {
+  border-color: var(--accent-color);
+  background: var(--bg-primary);
+  box-shadow: 0 0 0 1px var(--accent-color);
+}
+
+.anime-card.selected::before {
+  opacity: 1;
+}
+
+.anime-card.unselectable {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.anime-card.unselectable:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: var(--border-color);
+}
+
+.anime-card.unselectable:hover::before {
+  opacity: 0;
+}
+
+/* Downloads and webhooks */
+.downloads,
+.webhooks {
   margin-top: 2rem;
   padding: 1.5rem;
   background: var(--bg-secondary);
@@ -499,7 +606,8 @@ header h1 {
   border-radius: 12px;
 }
 
-.downloads h2 {
+.downloads h2,
+.webhooks h2 {
   font-size: 1.25rem;
   margin-bottom: 1rem;
 }
@@ -510,10 +618,26 @@ header h1 {
 
 .download-item {
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.25rem 1rem;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
   padding: 0.75rem 0;
   border-top: 1px solid var(--border-color);
+}
+
+.download-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.download-item.running .download-icon {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.4;
+  }
 }
 
 .download-item:first-child {
@@ -525,6 +649,23 @@ header h1 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.download-title {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.download-tag {
+  flex-shrink: 0;
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  border-radius: 4px;
 }
 
 .download-status {
@@ -542,10 +683,93 @@ header h1 {
 }
 
 .download-detail {
-  grid-column: 1 / -1;
+  grid-column: 2 / -1;
   font-size: 0.85rem;
   color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.download-detail.log {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+}
+
+.download-detail.folder {
+  color: var(--success-color);
+}
+
+.download-detail.error {
+  color: var(--error-color);
+}
+
+/* Webhooks */
+.section-hint {
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.webhook-form {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.webhook-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.75rem;
+  font-size: 1rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  transition: border-color 0.2s ease;
+}
+
+.webhook-form input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+.webhook-list {
+  list-style: none;
+}
+
+.webhook-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--border-color);
+}
+
+.webhook-item:first-child {
+  border-top: none;
+}
+
+.webhook-url {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.webhook-empty {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.webhook-empty.error {
+  color: var(--error-color);
+}
+
+@media (max-width: 480px) {
+  .webhook-form {
+    flex-direction: column;
+  }
 }

@@ -46,6 +46,26 @@
         />
       </div>
 
+      <div id="toolbar" class="toolbar">
+        <label id="batch-quality" class="batch-quality hidden">
+          Quality
+          <select id="batch-quality-select">
+            <option value="480">480p (SD)</option>
+            <option value="720" selected>720p (HD)</option>
+            <option value="1080">1080p (FHD)</option>
+          </select>
+        </label>
+        <button id="batch-download-btn" class="btn btn-primary hidden" type="button"></button>
+        <button
+          id="batch-toggle-btn"
+          class="btn btn-secondary"
+          type="button"
+          aria-pressed="false"
+        >
+          Select multiple
+        </button>
+      </div>
+
       <div id="status-message" class="status-message hidden" role="status"></div>
 
       <div id="loading" class="loading hidden">
@@ -70,6 +90,22 @@
       <section id="downloads" class="downloads hidden" aria-labelledby="downloads-title">
         <h2 id="downloads-title">Downloads</h2>
         <ul id="downloads-list" class="downloads-list"></ul>
+      </section>
+
+      <section id="webhooks" class="webhooks" aria-labelledby="webhooks-title">
+        <h2 id="webhooks-title">Webhooks</h2>
+        <p class="section-hint">Each URL receives a POST with the job details when a download finishes.</p>
+        <form id="webhook-form" class="webhook-form">
+          <input
+            id="webhook-input"
+            type="url"
+            placeholder="https://example.com/hook"
+            required
+            aria-label="Webhook URL"
+          />
+          <button id="webhook-add-btn" class="btn btn-primary" type="submit">Add</button>
+        </form>
+        <ul id="webhook-list" class="webhook-list"></ul>
       </section>
     </div>
 
@@ -99,6 +135,14 @@
               <label for="episode-input">Episode range</label>
               <input id="episode-input" type="text" placeholder="All episodes" />
               <small>A single episode (3) or a range (1-5)</small>
+            </div>
+            <div class="form-group">
+              <label for="quality-select">Quality</label>
+              <select id="quality-select">
+                <option value="480">480p (SD)</option>
+                <option value="720" selected>720p (HD)</option>
+                <option value="1080">1080p (FHD)</option>
+              </select>
             </div>
           </div>
 

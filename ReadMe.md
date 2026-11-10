@@ -34,6 +34,113 @@ See [DOCKER.md](DOCKER.md) for detailed setup instructions.
 - **Parallel Downloads**: Download multiple episodes simultaneously
 - **Sonarr Integration**: Automatically import downloaded content to your media library
 - **Content Types**: Download dubbed anime, subbed anime, cartoons, movies, and OVAs
+- **Batch Downloads**: Select several shows in the web UI and download them together
+- **Webhook Notifications**: Get a POST request when a download finishes
+
+## What's New
+
+- **Quality Selection**: Choose 480p, 720p, or 1080p from the web UI or with the `quality` API parameter (default `720`). `480` downloads the SD stream; `720` and `1080` both request the best HD stream WCO offers for that episode.
+- **Batch Downloads**: The web UI lets you select multiple shows and download them together. The API equivalent is `POST /download-batch` (up to 50 names per request). Every name is validated before any download starts, so one typo won't leave half a batch running.
+- **Webhook Notifications**: Register webhook URLs that receive a POST when a download finishes, whether it completed, failed, or timed out. Webhooks can be managed through the API or preset with the `WEBHOOK_URLS` environment variable (comma-separated). Up to 20 can be registered.
+- **Enhanced Download Queue**: The web UI queue shows a status icon per download (running, completed, failed, timed out), progress details, and the error message when something goes wrong.
+- **Subbed Anime Support**: Downloads started from the Subbed tab now fetch the subbed episodes. The API takes a `language` parameter (`sub` or `dub`).
+- **Bug Fixes**:
+  - The Python downloader now exits with code `1` when a download fails (invalid link, no episodes found, or an episode that couldn't be downloaded), so the server and scripts can detect failures.
+  - Titles that start with a digit, such as `1-happy-family-usa`, are now recognised.
+
+## Web API
+
+The Node.js server (port 3000 by default) exposes these endpoints. Download requests return `202 Accepted` immediately with a job object; poll `GET /downloads/:id` to follow it.
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `POST` | `/download-anime` | Download a whole show |
+| `POST` | `/download-batch` | Download several shows at once |
+| `POST` | `/download-single-episode` | Download one episode |
+| `GET` | `/downloads` | List download jobs |
+| `GET` | `/downloads/:id` | Get one download job |
+| `GET` | `/webhooks` | List registered webhooks |
+| `POST` | `/webhooks` | Register a webhook |
+| `DELETE` | `/webhooks/:url` | Remove a webhook |
+
+The `/download-anime` and `/download-batch` requests accept these optional parameters:
+
+| Parameter | Values | Default |
+| --- | --- | --- |
+| `season` | Season number, e.g. `"2"` | All seasons |
+| `episode` | Episode range, e.g. `"1-10"` | All episodes |
+| `newest` | `true` / `false` | `false` |
+| `quality` | `"480"`, `"720"`, `"1080"` | `"720"` |
+| `language` | `"sub"`, `"dub"` | The show's default |
+
+**Download a show in 1080p:**
+
+```bash
+curl -X POST http://localhost:3000/download-anime \
+  -H 'Content-Type: application/json' \
+  -d '{"name": "cool-show-name-here", "season": "2", "episode": "1-10", "quality": "1080"}'
+```
+
+**Download the subbed version of a show:**
+
+```bash
+curl -X POST http://localhost:3000/download-anime \
+  -H 'Content-Type: application/json' \
+  -d '{"name": "cool-show-name-here", "language": "sub", "quality": "720"}'
+```
+
+**Batch download several shows** (the other parameters apply to every show):
+
+```bash
+curl -X POST http://localhost:3000/download-batch \
+  -H 'Content-Type: application/json' \
+  -d '{"names": ["1-happy-family-usa", "cool-show-name-here"], "quality": "480", "newest": true}'
+```
+
+This returns an array of job objects, one per show.
+
+**Download a single episode:**
+
+```bash
+curl -X POST http://localhost:3000/download-single-episode \
+  -H 'Content-Type: application/json' \
+  -d '{"name": "cool-show-name-here-episode-2-english-dubbed"}'
+```
+
+**Register a webhook** (must be an `http` or `https` URL; returns `201` with the full list, or `409` if the URL is already registered):
+
+```bash
+curl -X POST http://localhost:3000/webhooks \
+  -H 'Content-Type: application/json' \
+  -d '{"url": "http://example.com/hook"}'
+```
+
+**List webhooks:**
+
+```bash
+curl http://localhost:3000/webhooks
+```
+
+**Remove a webhook.** The URL must be percent-encoded so it fits in one path segment (`encodeURIComponent` in JavaScript). Returns `204` on success or `404` if it wasn't registered:
+
+```bash
+curl -X DELETE http://localhost:3000/webhooks/http%3A%2F%2Fexample.com%2Fhook
+```
+
+When a download finishes, each webhook receives a JSON POST like this (`status` is `completed`, `failed`, or `timed_out`; `error` is only set when it didn't complete):
+
+```json
+{
+  "id": "3f1c2a9e-...",
+  "name": "cool-show-name-here",
+  "status": "failed",
+  "url": "https://www.wcostream.tv/anime/cool-show-name-here",
+  "outputFolder": "/downloads/cool-show-name-here/",
+  "error": "Process exited with code 1"
+}
+```
+
+Webhook calls time out after 10 seconds, and a failing webhook is logged without affecting the download.
 
 ## Architecture
 
@@ -48,6 +155,8 @@ Please go check out the wiki as it is indepth on what this script does.
 ## Table of Contents
 
 * [To-Do](#to-do)
+* [What's New](#whats-new)
+* [Web API](#web-api)
 * [Dependencies Installation](#dependencies-installation)
 * [Installation](#installation)
 * [Python Support](#python-support)
@@ -108,8 +217,11 @@ Currently, the script supports these arguments :
 ```
 -h, --help                             Prints the basic help menu of the script and exits.
 -i,--input                             Defines the input link to the show. [REQUIRED]
--V,--version                           Prints the VERSION and exits.
--hd,--highdef                          Selects 720p version if available (Only 480 and 720 are offered on WCO Stream)
+--version                              Prints the VERSION and exits.
+-q,--quality                           Video quality: 480, 720 or 1080 (Default = 480). 480 picks the SD source; 720 and 1080 both pick the best HD source the episode offers (1080 when available, otherwise 720).
+--lang,--language                      Audio language for shows that offer both: dub or sub (Default = dub). Only applies to show URLs, not single episodes.
+-hd,--highdef                          [Legacy] Same as -q 720. Use -q/--quality instead.
+--quiet                                Does not show download progress. (This used to be -q, which is now --quality.)
 -v,--verbose                           Starts Verbose Logging for detailed information.
 -o,--ouput                             Specifies download location
 -se,--season                           Selects the season to download of a show (Default = All)
@@ -118,8 +230,29 @@ Currently, the script supports these arguments :
 -n,--newest                            Downloads the newest episode of the show given.
 -sh, --show_downloaded_animes          Show all downloaded shows and episodes.
 -us, --update_shows                    Update all shows in your database that have new episodes.
--b, --batch                            Batch download, download multiple anime [Ex : -b ./file_name (a text file with wcostream.com, to download from).
+-b, --batch                            Batch download, download multiple anime [Ex : -b ./shows.txt (a text file with one show per line, either a show name such as naruto or a full wcostream URL)].
 -t, --threads                          This will create multiple threads, in other words download multiple episodes at ones [Ex : -t 4 (Number of threads to create).
+```
+
+### Examples
+```
+# Download in 1080p
+./wco-dl -i https://www.wcostream.tv/anime/naruto -q 1080
+
+# Download subbed anime
+./wco-dl -i https://www.wcostream.tv/anime/bleach --lang sub
+
+# Batch download with names
+echo -e "naruto\nbleach\none-piece" > shows.txt
+./wco-dl -b shows.txt --lang dub -q 720
+```
+
+### Batch file format
+One show per line. Each line is either a show name (the slug from the show's URL, e.g. `naruto` for `https://www.wcostream.tv/anime/naruto`) or a full show URL. Blank lines and lines starting with `#` are skipped. `-q`, `--lang`, `-se`, `-epr`, `-x`, `-o` and `-t` apply to every show in the file.
+```
+naruto
+bleach
+https://www.wcostream.tv/anime/one-piece
 ```
 
 ## Usage

@@ -197,6 +197,68 @@ describe('AppController (e2e)', () => {
       .expect(400);
   });
 
+  it('passes language to the show URL and rejects unknown values', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/download-anime')
+      .send({ name: 'bleach', language: 'sub', quality: '1080' })
+      .expect(202);
+    expect(res.body.url).toBe('https://www.wcostream.tv/anime/bleach?lang=sub');
+
+    await request(app.getHttpServer())
+      .post('/download-anime')
+      .send({ name: 'bleach', language: 'raw' })
+      .expect(400);
+    await request(app.getHttpServer())
+      .post('/download-anime')
+      .send({ name: 'bleach', quality: '4k' })
+      .expect(400);
+  });
+
+  it('starts a batch of show downloads', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/download-batch')
+      .send({ names: ['naruto', 'bleach'], language: 'dub', newest: true })
+      .expect(202);
+    expect(res.body).toHaveLength(2);
+    expect(res.body.map((job) => job.url)).toEqual([
+      'https://www.wcostream.tv/anime/naruto?lang=dub',
+      'https://www.wcostream.tv/anime/bleach?lang=dub',
+    ]);
+
+    await request(app.getHttpServer())
+      .post('/download-batch')
+      .send({ names: [] })
+      .expect(400);
+  });
+
+  it('manages webhooks', async () => {
+    const hook = 'http://127.0.0.1:9/hook?token=a/b';
+    await request(app.getHttpServer()).get('/webhooks').expect(200, []);
+    await request(app.getHttpServer())
+      .post('/webhooks')
+      .send({ url: hook })
+      .expect(201, [hook]);
+    const duplicate = await request(app.getHttpServer())
+      .post('/webhooks')
+      .send({ url: hook })
+      .expect(409);
+    expect(duplicate.body.message).toBe(
+      `Webhook ${hook} is already registered`,
+    );
+    await request(app.getHttpServer())
+      .post('/webhooks')
+      .send({ url: 'javascript:alert(1)' })
+      .expect(400);
+    await request(app.getHttpServer()).get('/webhooks').expect(200, [hook]);
+    await request(app.getHttpServer())
+      .delete(`/webhooks/${encodeURIComponent(hook)}`)
+      .expect(204);
+    await request(app.getHttpServer())
+      .delete(`/webhooks/${encodeURIComponent(hook)}`)
+      .expect(404);
+    await request(app.getHttpServer()).get('/webhooks').expect(200, []);
+  });
+
   it('returns 404 for unknown downloads', async () => {
     await request(app.getHttpServer()).get('/downloads/unknown').expect(404);
   });

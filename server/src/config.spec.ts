@@ -30,6 +30,14 @@ describe('loadConfig', () => {
     expect(config.corsOrigin).toBe('http://localhost:4000');
   });
 
+  it('parses comma-separated webhook URLs', () => {
+    expect(loadConfig({}).webhookUrls).toEqual([]);
+    expect(
+      loadConfig({ WEBHOOK_URLS: ' http://a.test/hook,, https://b.test ' })
+        .webhookUrls,
+    ).toEqual(['http://a.test/hook', 'https://b.test']);
+  });
+
   it('falls back to the default port for invalid values', () => {
     expect(loadConfig({ SERVER_PORT: 'abc' }).port).toBe(3000);
   });

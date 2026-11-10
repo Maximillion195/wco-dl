@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Inject,
   Injectable,
   InternalServerErrorException,
@@ -13,7 +14,7 @@ import { promisify } from 'util';
 import { APP_CONFIG } from './app-config.provider';
 import { AppConfig } from './config';
 import { WCO_BASE_URL } from './content-list';
-import { CreateShow } from './dto/all.dto';
+import { BatchDownload, CreateShow } from './dto/all.dto';
 import { ProcessResult, startProcess } from './process-runner';
 
 const execFileAsync = promisify(execFile);
@@ -37,6 +38,8 @@ export interface DownloadJob {
   kind: DownloadKind;
   name: string;
   url: string;
+  language?: string;
+  quality?: string;
   outputFolder: string;
   status: DownloadStatus;
   startedAt: string;
@@ -52,11 +55,26 @@ export interface DownloadJob {
 const MAX_LOG_LINES = 30;
 const MAX_LOG_LINE_LENGTH = 500;
 const MAX_TRACKED_JOBS = 100;
+const MAX_BATCH_SIZE = 50;
+const MAX_WEBHOOKS = 20;
+const WEBHOOK_TIMEOUT_MS = 10000;
 
 const SLUG_RE = /^[\w%-]{1,300}$/;
 const SEASON_RE = /^\d+$/;
 const EPISODE_RANGE_RE = /^\d+(-\d+)?$/;
+const LANGUAGE_RE = /^(dub|sub)$/;
+const QUALITY_RE = /^(480|720|1080)$/;
 const WCO_URL_PREFIX_RE = /^https?:\/\/(www\.)?wcostream\.tv\//i;
+
+interface PreparedShowDownload {
+  slug: string;
+  url: string;
+  outputFolder: string;
+  args: string[];
+  options: JobOptions;
+}
+
+type JobOptions = Pick<DownloadJob, 'language' | 'quality'>;
 
 /**
  * Accepts a bare slug, a `/anime/<slug>` path or a full wcostream URL and
@@ -98,18 +116,83 @@ function optionalParam(
   return text;
 }
 
+export function validateWebhookUrl(input: unknown): string {
+  const text = typeof input === 'string' ? input.trim() : '';
+  let parsed: URL;
+  try {
+    parsed = new URL(text);
+  } catch {
+    throw new BadRequestException(`Invalid webhook URL: ${text}`);
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new BadRequestException(`Webhook URL must be http(s): ${text}`);
+  }
+  return text;
+}
+
 @Injectable()
 export class DownloadService {
   private readonly logger = new Logger(DownloadService.name);
   private readonly jobs = new Map<string, DownloadJob>();
+  private readonly webhooks = new Set<string>();
 
-  constructor(@Inject(APP_CONFIG) private readonly config: AppConfig) {}
+  constructor(@Inject(APP_CONFIG) private readonly config: AppConfig) {
+    for (const url of config.webhookUrls ?? []) {
+      try {
+        this.webhooks.add(validateWebhookUrl(url));
+      } catch (error) {
+        this.logger.warn(`Ignoring WEBHOOK_URLS entry: ${error.message}`);
+      }
+    }
+  }
 
   showFolder(slug: string): string {
     return `${this.config.outputBase}/${slug}/`;
   }
 
   async startShowDownload(body: CreateShow): Promise<DownloadJob> {
+    const { slug, url, outputFolder, args, options } =
+      this.prepareShowDownload(body);
+    return this.startJob('show', slug, url, outputFolder, args, options);
+  }
+
+  /** Validates every name before starting anything, so a typo can't leave half a batch running. */
+  async startBatchDownload(body: BatchDownload): Promise<DownloadJob[]> {
+    const names = body?.names;
+    if (!Array.isArray(names) || names.length === 0) {
+      throw new BadRequestException('names must be a non-empty array');
+    }
+    if (names.length > MAX_BATCH_SIZE) {
+      throw new BadRequestException(
+        `A batch can contain at most ${MAX_BATCH_SIZE} names`,
+      );
+    }
+
+    const prepared = new Map<string, PreparedShowDownload>();
+    for (const name of names) {
+      const download = this.prepareShowDownload({
+        ...body,
+        name,
+      } as CreateShow);
+      if (!prepared.has(download.slug)) prepared.set(download.slug, download);
+    }
+
+    const jobs: DownloadJob[] = [];
+    for (const {
+      slug,
+      url,
+      outputFolder,
+      args,
+      options,
+    } of prepared.values()) {
+      jobs.push(
+        await this.startJob('show', slug, url, outputFolder, args, options),
+      );
+    }
+    return jobs;
+  }
+
+  private prepareShowDownload(body: CreateShow): PreparedShowDownload {
     const slug = normalizeSlug(body?.name, true);
     const season = optionalParam(body.season, SEASON_RE, 'season');
     const episode = optionalParam(
@@ -117,18 +200,21 @@ export class DownloadService {
       EPISODE_RANGE_RE,
       'episode range',
     );
+    const language = optionalParam(body.language, LANGUAGE_RE, 'language');
+    const quality = optionalParam(body.quality, QUALITY_RE, 'quality') ?? '720';
     const newest = body.newest === true || String(body.newest) === 'true';
 
-    const url = `${WCO_BASE_URL}/anime/${slug}`;
+    const url = `${WCO_BASE_URL}/anime/${slug}${language ? `?lang=${language}` : ''}`;
     const outputFolder = this.showFolder(slug);
     const args = ['-i', url];
     if (season) args.push('-se', season);
     if (episode) args.push('-epr', episode);
-    args.push('-hd');
+    // __main__.py only distinguishes SD from HD via -hd.
+    if (quality !== '480') args.push('-hd');
     if (newest) args.push('-n');
     args.push('-o', outputFolder, '-t', '2');
 
-    return this.startJob('show', slug, url, outputFolder, args);
+    return { slug, url, outputFolder, args, options: { language, quality } };
   }
 
   async startEpisodeDownload(name: unknown): Promise<DownloadJob> {
@@ -151,12 +237,35 @@ export class DownloadService {
     return this.jobs.get(id);
   }
 
+  addWebhook(url: unknown): string[] {
+    const valid = validateWebhookUrl(url);
+    if (this.webhooks.has(valid)) {
+      throw new ConflictException(`Webhook ${valid} is already registered`);
+    }
+    if (this.webhooks.size >= MAX_WEBHOOKS) {
+      throw new BadRequestException(
+        `At most ${MAX_WEBHOOKS} webhooks can be registered`,
+      );
+    }
+    this.webhooks.add(valid);
+    return this.listWebhooks();
+  }
+
+  removeWebhook(url: string): boolean {
+    return this.webhooks.delete(url);
+  }
+
+  listWebhooks(): string[] {
+    return [...this.webhooks];
+  }
+
   private async startJob(
     kind: DownloadKind,
     name: string,
     url: string,
     outputFolder: string,
     args: string[],
+    options: JobOptions = {},
   ): Promise<DownloadJob> {
     const { pythonBin, pythonScript, downloadIdleTimeoutMs } = this.config;
     const fullArgs = [pythonScript, ...args];
@@ -167,6 +276,7 @@ export class DownloadService {
       kind,
       name,
       url,
+      ...options,
       outputFolder,
       status: 'running',
       startedAt: new Date().toISOString(),
@@ -219,6 +329,32 @@ export class DownloadService {
     } catch (error) {
       this.logger.error(`Post-processing ${job.name} failed: ${error.message}`);
     }
+
+    await this.notifyWebhooks(job);
+  }
+
+  private async notifyWebhooks(job: DownloadJob) {
+    const payload = {
+      id: job.id,
+      name: job.name,
+      status: job.status,
+      url: job.url,
+      outputFolder: job.outputFolder,
+      error: job.error,
+    };
+    await Promise.all(
+      this.listWebhooks().map(async (webhook) => {
+        try {
+          await axios.post(webhook, payload, { timeout: WEBHOOK_TIMEOUT_MS });
+        } catch (error) {
+          const message =
+            axios.isAxiosError(error) && error.response
+              ? `HTTP ${error.response.status}`
+              : error.message;
+          this.logger.error(`Webhook ${webhook} failed: ${message}`);
+        }
+      }),
+    );
   }
 
   /** Fixes file ownership and asks Sonarr to import the folder. */

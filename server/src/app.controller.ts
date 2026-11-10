@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -16,7 +17,13 @@ import {
   PostProcessResult,
   normalizeSlug,
 } from './download.service';
-import { CreateShow, ProcessShow, SingleEpisodeReq } from './dto/all.dto';
+import {
+  BatchDownload,
+  CreateShow,
+  ProcessShow,
+  SingleEpisodeReq,
+  WebhookReq,
+} from './dto/all.dto';
 
 @Controller()
 export class AppController {
@@ -61,6 +68,12 @@ export class AppController {
     return this.downloadService.startShowDownload(body);
   }
 
+  @Post('download-batch')
+  @HttpCode(HttpStatus.ACCEPTED)
+  batchDownload(@Body() body: BatchDownload): Promise<DownloadJob[]> {
+    return this.downloadService.startBatchDownload(body);
+  }
+
   @Post('download-single-episode')
   @HttpCode(HttpStatus.ACCEPTED)
   getSingleEpisode(@Body() body: SingleEpisodeReq): Promise<DownloadJob> {
@@ -89,5 +102,25 @@ export class AppController {
       throw new NotFoundException(`Download ${id} not found`);
     }
     return job;
+  }
+
+  @Get('webhooks')
+  listWebhooks(): string[] {
+    return this.downloadService.listWebhooks();
+  }
+
+  @Post('webhooks')
+  @HttpCode(HttpStatus.CREATED)
+  addWebhook(@Body() body: WebhookReq): string[] {
+    return this.downloadService.addWebhook(body?.url);
+  }
+
+  // The URL must be percent-encoded (encodeURIComponent) to fit in one path segment.
+  @Delete('webhooks/:url')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  removeWebhook(@Param('url') url: string): void {
+    if (!this.downloadService.removeWebhook(url)) {
+      throw new NotFoundException(`Webhook ${url} not found`);
+    }
   }
 }

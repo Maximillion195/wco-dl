@@ -14,6 +14,7 @@ export interface AppConfig {
   downloadIdleTimeoutMs: number;
   puid: string | undefined;
   pgid: string | undefined;
+  webhookUrls: string[];
 }
 
 function toInt(value: string | undefined, fallback: number): number {
@@ -44,6 +45,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     downloadIdleTimeoutMs: toInt(env.DOWNLOAD_IDLE_TIMEOUT_MS, 150000),
     puid: env.PUID || undefined,
     pgid: env.PGID || undefined,
+    webhookUrls: (env.WEBHOOK_URLS || '')
+      .split(',')
+      .map((url) => url.trim())
+      .filter(Boolean),
   };
 }
 

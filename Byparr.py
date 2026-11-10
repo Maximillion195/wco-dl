@@ -19,7 +19,7 @@ class ByparrError(Exception):
 class Byparr(object):
     """Client for a Byparr (FlareSolverr-compatible) instance, configured via BYPARR_URL."""
 
-    def __init__(self, base_url=None, max_timeout=60000):
+    def __init__(self, base_url=None, max_timeout=120000):
         base_url = base_url or os.environ.get('BYPARR_URL') or DEFAULT_BYPARR_URL
         base_url = base_url.rstrip('/')
         if not base_url.endswith('/v1'):
