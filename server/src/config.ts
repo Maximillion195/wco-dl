@@ -7,6 +7,8 @@ export interface AppConfig {
   byparrMaxTimeoutMs: number;
   sonarrUrl: string;
   sonarrApiKey: string | undefined;
+  /** Where Sonarr sees OUTPUT_BASE when it runs outside this container (e.g. D:\Downloads\wco-dl). */
+  sonarrImportBase: string | undefined;
   corsOrigin: string;
   outputBase: string;
   pythonBin: string;
@@ -38,6 +40,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     byparrMaxTimeoutMs: toInt(env.BYPARR_MAX_TIMEOUT_MS, 60000),
     sonarrUrl: stripTrailingSlash(env.SONARR_URL || 'http://localhost:8989'),
     sonarrApiKey: env.SONARR_API_KEY || undefined,
+    sonarrImportBase: env.SONARR_IMPORT_BASE || undefined,
     corsOrigin: env.CORS_ORIGIN || `http://localhost:${port}`,
     outputBase:
       env.OUTPUT_BASE || (isProd ? '/data/torrents/completed' : './output'),

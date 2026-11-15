@@ -13,6 +13,7 @@ services:
       - BYPARR_URL=http://byparr:8191
       - SONARR_URL=${SONARR_URL:-}
       - SONARR_API_KEY=${SONARR_API_KEY:-}
+      - SONARR_IMPORT_BASE=${SONARR_IMPORT_BASE:-}
       - OUTPUT_BASE=${OUTPUT_BASE:-/data/downloads}
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
