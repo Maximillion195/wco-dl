@@ -24,6 +24,10 @@ services:
       - WEBHOOK_URLS=${WEBHOOK_URLS:-}
       - WEBHOOK_ALLOW_INTERNAL=${WEBHOOK_ALLOW_INTERNAL:-false}
       - PYTHONUNBUFFERED=1
+      - TZ=${TZ:-UTC}
+      - NOTIFY_URL=${NOTIFY_URL:-}
+      - NOTIFY_TOKEN=${NOTIFY_TOKEN:-}
+      - PUBLIC_URL=${PUBLIC_URL:-}
     volumes:
       # Downloaded files
       - downloads:${OUTPUT_BASE:-/data/downloads}

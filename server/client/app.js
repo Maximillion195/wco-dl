@@ -436,6 +436,8 @@ function openModal(anime) {
   elements.modalLink.href = isEpisode
     ? `${WCO_BASE_URL}/${anime.path}`
     : `${WCO_BASE_URL}/anime/${anime.path}`;
+  const mapLink = document.getElementById('modal-map');
+  if (mapLink) mapLink.href = `/map.html?url=${encodeURIComponent(anime.path)}`;
   elements.modal.querySelectorAll('.series-only').forEach(el => el.classList.toggle('hidden', isEpisode));
   elements.modal.querySelectorAll('.episode-only').forEach(el => el.classList.toggle('hidden', !isEpisode));
 

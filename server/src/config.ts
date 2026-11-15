@@ -9,6 +9,14 @@ export interface AppConfig {
   sonarrApiKey: string | undefined;
   /** Where Sonarr sees OUTPUT_BASE when it runs outside this container (e.g. D:\Downloads\wco-dl). */
   sonarrImportBase: string | undefined;
+  /** Persistent settings and the fill queue's history (the config volume). */
+  configDir: string;
+  /** Optional: POST a JSON summary {source, title, body, url} here when the overnight runs finish. */
+  notifyUrl: string | undefined;
+  /** Optional: sent with that POST as the x-notify-token header. */
+  notifyToken: string | undefined;
+  /** Optional: this app's address as people open it (e.g. http://nas:3000), for the link in that summary. */
+  publicUrl: string | undefined;
   corsOrigin: string;
   outputBase: string;
   pythonBin: string;
@@ -41,6 +49,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     sonarrUrl: stripTrailingSlash(env.SONARR_URL || 'http://localhost:8989'),
     sonarrApiKey: env.SONARR_API_KEY || undefined,
     sonarrImportBase: env.SONARR_IMPORT_BASE || undefined,
+    configDir: env.CONFIG_DIR || (isProd ? '/app/config' : './config'),
+    notifyUrl: env.NOTIFY_URL || undefined,
+    notifyToken: env.NOTIFY_TOKEN || undefined,
+    publicUrl: env.PUBLIC_URL ? stripTrailingSlash(env.PUBLIC_URL) : undefined,
     corsOrigin: env.CORS_ORIGIN || `http://localhost:${port}`,
     outputBase:
       env.OUTPUT_BASE || (isProd ? '/data/torrents/completed' : './output'),

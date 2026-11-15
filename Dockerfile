@@ -23,7 +23,7 @@ RUN groupadd -r appuser && useradd -r -g appuser -m appuser
 
 # Install Node.js
 RUN apt-get update && \
-    apt-get install -y curl && \
+    apt-get install -y curl ffmpeg && \
     curl -fsSL https://deb.nodesource.com/setup_21.x | bash - && \
     apt-get install -y nodejs && \
     apt-get clean && \

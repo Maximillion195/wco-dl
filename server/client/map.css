@@ -1,0 +1,462 @@
+[hidden]{display:none!important}
+/* Episode map, option B (11 Nov 2026). Graphite neutrals; indigo is the app's accent and marks only
+   the selection and focus. The one warm tone means "Japanese audio only": the thing this screen exists to fix. */
+:root{
+  --bg:#fafafa;--surface:#ffffff;--surface-2:#f2f2f3;--line:rgba(29,29,31,.10);--line-strong:rgba(29,29,31,.22);
+  --text:#1d1d1f;--text-2:#55555a;--muted:#6a6a70;
+  --accent:#4f46e5;--accent-soft:rgba(79,70,229,.10);--on-primary:#ffffff;--primary:#1d1d1f;
+  --jp:#8a6514;--jp-soft:rgba(176,128,20,.09);--jp-line:rgba(176,128,20,.40);
+  --ease:cubic-bezier(.2,.7,.2,1);--fast:120ms;--mid:180ms;
+  --mono:ui-monospace,"Cascadia Mono","SF Mono",Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){
+  --bg:#161617;--surface:#1d1d1f;--surface-2:#26262a;--line:rgba(255,255,255,.08);--line-strong:rgba(255,255,255,.20);
+  --text:#ededf0;--text-2:#a1a1a8;--muted:#86868d;
+  --accent:#8b93f8;--accent-soft:rgba(139,147,248,.14);--on-primary:#161617;--primary:#ededf0;
+  --jp:#d4b26a;--jp-soft:rgba(212,178,106,.10);--jp-line:rgba(212,178,106,.38);color-scheme:dark}}
+:root[data-theme=dark]{
+  --bg:#161617;--surface:#1d1d1f;--surface-2:#26262a;--line:rgba(255,255,255,.08);--line-strong:rgba(255,255,255,.20);
+  --text:#ededf0;--text-2:#a1a1a8;--muted:#86868d;
+  --accent:#8b93f8;--accent-soft:rgba(139,147,248,.14);--on-primary:#161617;--primary:#ededf0;
+  --jp:#d4b26a;--jp-soft:rgba(212,178,106,.10);--jp-line:rgba(212,178,106,.38);color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+.page{max-width:1240px;margin:0 auto;padding:24px 24px 128px}
+.top{display:flex;gap:12px;align-items:center;margin-bottom:24px}
+.brand{font-weight:500;margin-right:8px}
+.lookup{flex:1;display:flex;gap:8px;min-width:0}
+.lookup input{flex:1;min-width:0;height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--line);background:var(--surface)}
+.btn{height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);cursor:pointer;display:inline-flex;align-items:center;gap:8px;white-space:nowrap;transition:background-color var(--fast) var(--ease),border-color var(--fast) var(--ease),transform var(--fast) var(--ease)}
+.btn:hover{background:var(--surface-2)}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--primary);border-color:var(--primary);color:var(--on-primary);font-weight:500}
+.btn-primary:hover{background:var(--primary);opacity:.9}
+.btn-quiet{border-color:transparent;background:transparent;color:var(--text-2)}
+.btn svg,.ico{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.show{display:flex;gap:24px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;padding-bottom:20px;border-bottom:1px solid var(--line);margin-bottom:20px}
+h1{font-size:24px;line-height:1.25;font-weight:500;margin:0 0 4px;letter-spacing:-.01em}
+.where{color:var(--muted);font-size:13px}
+.where code{font-family:var(--mono);font-size:12px}
+.where button{background:none;border:0;padding:0;color:var(--text-2);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.tally{display:flex;gap:16px;flex-wrap:wrap;color:var(--text-2);font-size:13px;margin-top:12px;font-variant-numeric:tabular-nums}
+.tally b{color:var(--text);font-weight:500}
+.seg{display:inline-flex;padding:2px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line)}
+.seg button{height:30px;padding:0 14px;border:0;border-radius:8px;background:transparent;color:var(--text-2);cursor:pointer;transition:background-color var(--fast) var(--ease),color var(--fast) var(--ease)}
+.seg button[aria-pressed=true]{background:var(--surface);color:var(--text);box-shadow:0 0 0 1px var(--line)}
+
+.tools{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;color:var(--text-2);font-size:13px}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.sw{width:16px;height:16px;border-radius:4px;border:1px solid var(--line);background:var(--surface-2)}
+.sw.jp{background:var(--jp-soft);border-color:var(--jp-line)}
+.sw.miss{background:transparent;border:1px dashed var(--line-strong)}
+.sw.sel{background:var(--accent-soft);border:2px solid var(--accent)}
+.grow{flex:1}
+.hint{color:var(--muted);font-size:12px}
+kbd{font-family:var(--mono);font-size:11px;padding:1px 6px;border-radius:4px;border:1px solid var(--line);border-bottom-width:2px;background:var(--surface)}
+
+.season{display:grid;grid-template-columns:136px 1fr;gap:16px;padding:16px 0;border-top:1px solid var(--line)}
+.season:first-of-type{border-top:0}
+.slabel{all:unset;cursor:pointer;display:flex;flex-direction:column;gap:2px;align-self:start;padding:4px 8px;margin:-4px -8px;border-radius:8px;transition:background-color var(--fast) var(--ease)}
+.slabel:hover{background:var(--surface-2)}
+.slabel:focus-visible{outline:2px solid var(--accent)}
+.slabel b{font-weight:500}
+.slabel span{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+.slabel[aria-disabled=true]{cursor:default}
+.slabel[aria-disabled=true]:hover{background:none}
+.cells{display:grid;grid-template-columns:repeat(auto-fill,48px);gap:6px;user-select:none;touch-action:pan-y}
+.cell{position:relative;width:48px;height:48px;border-radius:8px;border:1px solid var(--line);background:var(--surface-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:default;padding:0;font-variant-numeric:tabular-nums;transition:background-color var(--fast) var(--ease),border-color var(--fast) var(--ease),transform var(--fast) var(--ease)}
+.cell .n{font-size:14px;line-height:1;color:var(--text-2)}
+.cell .au{font-family:var(--mono);font-size:11px;line-height:1;color:var(--muted);letter-spacing:.02em}
+.cell.undub{background:var(--jp-soft);border-color:var(--jp-line);cursor:pointer}
+.cell.undub .n,.cell.undub .au{color:var(--jp)}
+.cell.missing{background:transparent;border:1px dashed var(--line-strong);cursor:pointer}
+.cell.missing .n{color:var(--text)}
+.cell.future{background:transparent;border-style:dotted;opacity:.55}
+.cell.undub:hover,.cell.missing:hover{border-color:var(--text-2)}
+.cell[aria-checked=true]{background:var(--accent-soft);border:2px solid var(--accent)}
+.cell[aria-checked=true] .n{color:var(--text)}
+.cell[aria-checked=true] .au{color:var(--accent)}
+.cell:active{transform:scale(.96)}
+
+.tip{position:fixed;z-index:20;width:300px;padding:12px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--line);box-shadow:0 8px 24px rgba(0,0,0,.18);pointer-events:none;opacity:0;transform:translateY(4px);transition:opacity var(--fast) var(--ease),transform var(--fast) var(--ease)}
+.tip.on{opacity:1;transform:none}
+.tip .k{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.tip .t{font-weight:500;margin:2px 0 8px}
+.tip dl{display:grid;grid-template-columns:72px 1fr;gap:2px 8px;margin:0;font-size:12px}
+.tip dt{color:var(--muted)}
+.tip dd{margin:0;color:var(--text-2);overflow-wrap:anywhere}
+.tip .act{margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:12px;color:var(--text-2)}
+
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--surface);border-top:1px solid var(--line);transform:translateY(100%);transition:transform var(--mid) var(--ease)}
+.bar.on{transform:none}
+.bar .in{max-width:1240px;margin:0 auto;padding:12px 24px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.bar .sum{font-variant-numeric:tabular-nums}
+.bar .sum b{font-weight:500}
+.bar .sum span{color:var(--text-2)}
+.bar select{height:36px;padding:0 8px;border-radius:8px;border:1px solid var(--line);background:var(--surface)}
+.toast{position:fixed;left:50%;bottom:88px;transform:translate(-50%,8px);padding:8px 14px;border-radius:8px;background:var(--primary);color:var(--on-primary);font-size:13px;opacity:0;transition:opacity var(--mid) var(--ease),transform var(--mid) var(--ease);pointer-events:none;z-index:30}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.note{color:var(--muted);font-size:12px;margin-top:24px}
+@media (max-width:720px){
+  .page{padding:16px 16px 168px}
+  .top{flex-wrap:wrap}.lookup{flex-basis:100%}
+  .season{grid-template-columns:1fr;gap:8px}
+  .cells{grid-template-columns:repeat(auto-fill,44px)}.cell{width:44px;height:44px}
+  .bar .in{padding:12px 16px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* Live page additions (11 Nov 2026): fill states on the squares, the show picker and the run strip */
+.cell[class*=" f-"] .au{color:var(--accent)}
+.cell.f-queued{border:2px dashed var(--accent);background:transparent}
+.cell.f-downloading,.cell.f-importing{border:2px solid var(--accent);background:linear-gradient(to top,var(--accent-soft) var(--p,0%),transparent var(--p,0%))}
+.cell.f-done{border:2px solid var(--text-2)}
+.cell.f-premium{border:1px solid var(--line-strong);background:var(--surface-2)}
+.cell.f-kept,.cell.f-failed{border:2px solid var(--err)}
+.cell.f-kept .au,.cell.f-failed .au{color:var(--err)}
+:root{--err:#b42318}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--err:#f97066}}
+:root[data-theme=dark]{--err:#f97066}
+.picker{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:16px;margin-bottom:20px}
+.picker h2{font-size:16px;font-weight:500;margin:0 0 4px}
+.picker p{margin:0 0 12px;color:var(--text-2)}
+.picker ul{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:4px}
+.picker li button{all:unset;cursor:pointer;display:flex;gap:8px;align-items:baseline;width:100%;padding:8px 12px;border-radius:8px;box-sizing:border-box}
+.picker li button:hover,.picker li button:focus-visible{background:var(--surface-2)}
+.picker li span{color:var(--muted);font-size:12px;font-family:var(--mono)}
+.picker input{width:100%;height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg)}
+.run{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 16px;border:1px solid var(--line);border-radius:12px;background:var(--surface);margin-bottom:16px;font-variant-numeric:tabular-nums}
+.run b{font-weight:500}
+.run .meta{color:var(--text-2);font-size:13px}
+.status{padding:12px 16px;border-radius:12px;border:1px solid var(--line);color:var(--text-2);margin-bottom:16px}
+.status.err{border-color:var(--err);color:var(--err)}
+.empty{color:var(--muted);padding:48px 0;text-align:center}
+.legend .f{width:16px;height:16px;border-radius:4px;border:2px dashed var(--accent)}
+
+/* Critique fixes, 11 Nov 2026 */
+.brand{color:inherit;text-decoration:none}
+.cell[aria-checked=true]:hover{border-color:var(--accent)}
+.cell.undub[aria-checked=true] .au{color:var(--jp)}           /* a selected swap still reads as JP */
+.sw.soon{background:transparent;border:1px dotted var(--line-strong);opacity:.7}
+.sum .warn{display:block;color:var(--jp);font-size:12px;margin-top:2px}
+.btn-primary.confirm{background:var(--jp);border-color:var(--jp);color:var(--bg)}
+.cells.folded{display:flex;gap:12px;align-items:center;color:var(--muted);font-size:13px;min-height:32px}
+.fold-btn{height:28px;padding:0 10px;font-size:13px}
+.hint b{font-weight:500;color:var(--text-2)}
+::selection{background:var(--accent-soft);color:var(--text)}
+@media (max-width:720px){.top .brand{order:0}#theme{order:1;margin-left:auto}.lookup{order:2}}
+/* Measured fixes (detector + browser check, 11 Nov 2026) */
+.cell.dub .au{color:var(--text-2)}                       /* "EN" was 4.2:1; now above 4.5:1 */
+:root{--jp-line:rgba(176,128,20,.62)}                   /* light JP border was 1.6:1 */
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--jp-line:rgba(212,178,106,.5)}}
+:root[data-theme=dark]{--jp-line:rgba(212,178,106,.5)}
+.seg{padding:4px}
+@media (pointer:coarse){.btn,.seg button,.bar select,.lookup input{min-height:44px}.where button{padding:12px 0}}
+
+/* Queue panel, follow switch, followed shows (11 Nov 2026) */
+.count{font-variant-numeric:tabular-nums;color:var(--accent);font-weight:500}
+.queue{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:16px;margin-bottom:20px}
+.qhead{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.qhead h2{font-size:16px;font-weight:500;margin:0}
+.qrun{border-top:1px solid var(--line);padding:12px 0}
+.qrun header{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.qrun header b{font-weight:500}
+.qrun .meta{color:var(--text-2);font-size:13px;font-variant-numeric:tabular-nums}
+.tag{font-size:12px;padding:1px 8px;border-radius:6px;border:1px solid var(--line);color:var(--text-2)}
+.qeps{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.qeps li{display:grid;grid-template-columns:56px 1fr auto;gap:12px;align-items:baseline;padding:6px 8px;border-radius:8px;font-size:13px}
+.qeps li:hover{background:var(--surface-2)}
+.qeps .code{font-family:var(--mono);color:var(--muted);font-size:12px}
+.qeps .msg{display:block;color:var(--text-2);font-size:12px}
+.qeps .st{font-size:12px;color:var(--text-2);white-space:nowrap}
+.qeps .st.bad{color:var(--err)} .qeps .st.ok{color:var(--text)} .qeps .st.live{color:var(--accent)}
+.qeps pre{grid-column:1/-1;margin:4px 0 0;padding:12px;border-radius:8px;background:var(--bg);border:1px solid var(--line);font:12px/1.5 var(--mono);color:var(--text-2);white-space:pre-wrap;max-height:320px;overflow:auto}
+.linkbtn{all:unset;cursor:pointer;color:var(--text-2);text-decoration:underline;text-underline-offset:2px;font-size:12px}
+.linkbtn:focus-visible{outline:2px solid var(--accent)}
+.btn.follow[aria-pressed=true]{background:var(--accent-soft);border-color:var(--accent);color:var(--text)}
+
+/* Run strip with progress, queue "now" line, home screen, folded how-to (11 Nov 2026, second pass) */
+.bar{visibility:hidden;transition:transform var(--mid) var(--ease),visibility 0s var(--mid)}   /* off-screen buttons leave the tab order */
+.bar.on{visibility:visible;transition:transform var(--mid) var(--ease)}
+.run,.now{display:block;padding:12px 16px;border:1px solid var(--line);border-radius:12px;background:var(--surface);margin-bottom:16px;font-variant-numeric:tabular-nums}
+.run.bad{border-color:var(--line-strong)}
+.runrow{display:flex;gap:8px 12px;align-items:center;flex-wrap:wrap}
+.runrow b{font-weight:500}
+.runrow .what{color:var(--text-2);min-width:0;overflow-wrap:anywhere}
+.runrow .meta{color:var(--text-2);font-size:13px}
+.code{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.prog{height:4px;border-radius:2px;background:var(--surface-2);margin-top:12px;overflow:hidden}
+.prog i{display:block;height:100%;border-radius:2px;background:var(--accent);transition:width var(--mid) var(--ease)}
+.queue .now{background:var(--bg);margin:0 0 4px}
+.qhead{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center}
+.qhead .hint{grid-column:1/-1}
+.help{margin-bottom:8px;color:var(--muted);font-size:12px}
+.help summary{cursor:pointer;width:fit-content;padding:4px 0;color:var(--text-2)}
+.help summary:hover{color:var(--text)}
+.help p{margin:8px 0 0}
+.help b{font-weight:500;color:var(--text-2)}
+.btn.follow svg{display:none}
+.btn.follow[aria-pressed=true] svg{display:block;stroke:var(--accent)}
+.home{padding:8px 0 0}
+.fhead{display:flex;gap:8px 12px;align-items:baseline;flex-wrap:wrap;padding-bottom:12px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.fhead h2{font-size:16px;font-weight:500;margin:0}
+.fhead input{height:32px;width:220px;max-width:100%;padding:0 10px;border-radius:8px;border:1px solid var(--line);background:var(--surface)}
+.flist{list-style:none;margin:0;padding:0;columns:280px;column-gap:24px}
+.flist li{break-inside:avoid;display:flex;gap:8px;align-items:baseline;padding:5px 8px;margin:0 -8px;border-radius:8px}
+.flist li:hover{background:var(--surface-2)}
+.flist a{color:var(--text);text-decoration:none;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.flist a:hover{text-decoration:underline;text-underline-offset:2px}
+.flist .live{margin-left:auto;font-size:12px;color:var(--accent);white-space:nowrap}
+.empty{padding:32px 0}
+@media (max-width:720px){.fhead input{width:100%}.runrow .grow{display:none}}
+@media (pointer:coarse){.flist li{padding:10px 8px}.fhead input{min-height:44px}}
+
+/* Screens nav, "incomplete" filter and missing marks on the home list, library gaps screen (11 Nov 2026) */
+.nav{display:flex;gap:4px}
+.nav a{padding:6px 10px;border-radius:8px;color:var(--text-2);text-decoration:none;white-space:nowrap}
+.nav a:hover{background:var(--surface-2)}
+.nav a[aria-current=page]{color:var(--text);background:var(--surface-2)}
+.flist .gapmark{margin-left:auto;font-size:12px;color:var(--jp);white-space:nowrap;font-variant-numeric:tabular-nums}
+.flist .gapmark + .live{margin-left:0}
+.fhead .seg button{height:28px}
+.group{display:flex;gap:12px;align-items:baseline;font-size:14px;font-weight:500;margin:24px 0 4px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.group code{font-family:var(--mono);font-size:13px}
+.lib{list-style:none;margin:0;padding:0}
+.lib li{display:grid;grid-template-columns:minmax(0,1.2fr) 96px minmax(0,1.4fr) auto;gap:8px 16px;align-items:center;padding:8px;margin:0 -8px;border-radius:8px;border-bottom:1px solid var(--line)}
+.lib li:hover{background:var(--surface-2)}
+.lib .name{min-width:0}
+.lib .name b{font-weight:500;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lib .name span{display:block;font-family:var(--mono);font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lib .gaps{font-variant-numeric:tabular-nums;font-size:13px;color:var(--text)}
+.lib .gaps span{color:var(--muted);font-size:12px}
+.lib .match{min-width:0;font-size:13px;color:var(--text-2);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.lib .match select,.lib .match input{height:32px;max-width:100%;min-width:0;padding:0 8px;border-radius:8px;border:1px solid var(--line);background:var(--surface)}
+.lib .match input{width:220px}
+.lib .acts{display:flex;gap:8px;align-items:center;justify-content:flex-end}
+.lib .btn{height:32px}
+.lib .found{flex-basis:100%;display:flex;gap:6px;flex-wrap:wrap}
+.tag.ok{color:var(--accent);border-color:var(--accent)}
+.tools input[type=search]{height:36px;width:220px;max-width:100%;padding:0 12px;border-radius:8px;border:1px solid var(--line);background:var(--surface)}
+.tools .seg button{padding:0 10px}
+@media (max-width:720px){
+  .nav{order:1}.top #theme{order:2}
+  .lib li{grid-template-columns:1fr auto}
+  .lib .match{grid-column:1/-1}.lib .acts{grid-column:1/-1;justify-content:flex-start}
+  .tools input[type=search]{width:100%}
+}
+/* Library screen fixes after looking at it (11 Nov 2026): link-buttons, aligned columns, segments that scroll on a phone */
+a.btn{color:inherit;text-decoration:none}
+.lib li{grid-template-columns:minmax(0,1.2fr) 120px minmax(0,1.4fr) 150px}
+.lib .gaps{white-space:nowrap}
+.tools .seg{max-width:100%;overflow-x:auto}
+.tools .seg button{white-space:nowrap;flex:none}
+@media (max-width:720px){.lib li{grid-template-columns:1fr auto}}
+
+/* Needs you list, pause button, run next (11 Nov 2026, third pass) */
+.qbtns{display:flex;gap:8px;align-items:center}
+.btn[aria-pressed=true]#pausebtn{background:var(--jp-soft);border-color:var(--jp-line);color:var(--jp)}
+#attention{margin-bottom:32px;scroll-margin-top:16px}
+.alist{list-style:none;margin:0;padding:0}
+.alist li{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:8px 12px;align-items:center;padding:8px;margin:0 -8px;border-radius:8px;border-bottom:1px solid var(--line);font-size:13px}
+.alist li:hover{background:var(--surface-2)}
+.alist b{font-weight:500}
+.alist .msg{display:block;color:var(--text-2);font-size:12px;overflow-wrap:anywhere}
+.alist .acts{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.alist .btn{height:32px}
+.alist pre{grid-column:1/-1;margin:0;padding:12px;border-radius:8px;background:var(--bg);border:1px solid var(--line);font:12px/1.5 var(--mono);color:var(--text-2);white-space:pre-wrap;max-height:320px;overflow:auto}
+.foot{margin-top:32px}
+.foot a{color:inherit}
+.flist .gapmark{white-space:nowrap}
+@media (max-width:720px){.alist li{grid-template-columns:48px minmax(0,1fr)}.alist .acts{grid-column:1/-1;justify-content:flex-start}}
+
+/* A file whose audio is not labelled (11 Nov 2026): looks like any library file, with a "?" and a pointer cursor in Dub mode */
+.cell.unknown:not([aria-disabled=true]){cursor:pointer}
+.cell.unknown:not([aria-disabled=true]):hover{border-color:var(--text-2)}
+
+/* wcostream name search results (11 Nov 2026) */
+#found li{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+#found li button[data-slug]:not(.linkbtn){flex:1;min-width:240px;width:auto}
+#found li button[disabled]{cursor:default;color:var(--text-2)}
+#found li button[disabled]:hover{background:none}
+#found .btn{height:32px}
+#found li .linkbtn{width:auto;display:inline;padding:0;white-space:nowrap}
+#found li .linkbtn:hover{background:none}
+
+/* Split-folder note and marks, add-to-Sonarr choices (11 Nov 2026, fourth pass) */
+.splitnote{margin-top:12px;padding:8px 12px;border-radius:8px;border:1px solid var(--jp-line);background:var(--jp-soft);color:var(--jp);font-size:13px;max-width:760px;overflow-wrap:anywhere}
+.flist .tag{flex:none}
+.flist .tag + .gapmark{margin-left:0}
+.flist a + .tag{margin-left:auto}
+#found .choices{flex-basis:100%;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+#found .choices:empty{display:none}
+#found .choices .btn{flex:none;min-width:0;width:auto;padding:0 12px;box-sizing:border-box;border:1px solid var(--line);background:var(--surface)}
+#found li a.linkbtn{color:var(--text-2)}
+.lib li{grid-template-columns:minmax(0,1.2fr) 190px minmax(0,1.3fr) 150px}
+@media (max-width:720px){.lib li{grid-template-columns:1fr auto}}
+#found li button.btn{display:inline-flex;align-items:center;width:auto;flex:none;height:32px;padding:0 14px;border:1px solid var(--line);border-radius:8px;background:var(--surface);cursor:pointer;box-sizing:border-box}
+#found li button.btn:hover{background:var(--surface-2)}
+#found li button.btn[disabled]{opacity:.55;cursor:default}
+#found li button[data-slug]:not(.linkbtn){flex:1 1 420px}
+#found li button.btn[data-add],#found .choices button.btn[data-tvdb]{flex:none;min-width:0}
+
+/* Search box with suggestions, and motion (11 Nov 2026, fifth pass). Motion is short and functional: a panel that
+   appears rises 6px, squares arrive once per show, a finished square pops once, bars slide. No glow, no shimmer. */
+.searchbox{position:relative;flex:1;min-width:0}
+.searchbox input{width:100%;height:36px;padding:0 64px 0 36px;border-radius:8px;border:1px solid var(--line);background:var(--surface);transition:border-color var(--fast) var(--ease),box-shadow var(--fast) var(--ease)}
+.searchbox input:hover{border-color:var(--line-strong)}
+.searchbox input:focus-visible{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.sico{position:absolute;left:12px;top:50%;translate:0 -50%;color:var(--muted);pointer-events:none}
+.skey{position:absolute;right:10px;top:50%;translate:0 -50%;color:var(--muted);pointer-events:none}
+.searchbox input:focus ~ .skey{opacity:0}
+.sclear{all:unset;position:absolute;right:6px;top:50%;translate:0 -50%;width:28px;height:28px;display:grid;place-items:center;border-radius:6px;color:var(--muted);cursor:pointer}
+.sclear:hover{background:var(--surface-2);color:var(--text)}
+.sclear:focus-visible{outline:2px solid var(--accent)}
+.suggest{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:40;padding:6px;border-radius:12px;border:1px solid var(--line);background:var(--surface);box-shadow:0 12px 32px rgba(0,0,0,.14);max-height:min(60vh,440px);overflow:auto;animation:rise var(--fast) var(--ease) both}
+.sgroup{padding:8px 10px 4px;font-size:12px;color:var(--muted)}
+.sopt{display:flex;gap:12px;align-items:baseline;padding:8px 10px;border-radius:8px;cursor:pointer}
+.sopt[aria-selected=true]{background:var(--surface-2)}
+.sname{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.smeta{margin-left:auto;flex:none;font-size:12px;color:var(--muted);white-space:nowrap}
+.snote{padding:10px;font-size:12px;color:var(--muted)}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes pop{0%{transform:scale(1)}45%{transform:scale(1.12)}100%{transform:scale(1)}}
+.enter{animation:rise var(--mid) var(--ease) both}
+.fresh .cell{animation:rise 200ms var(--ease) both;animation-delay:calc(var(--i,0) * 7ms)}
+.cell.pop{animation:pop 260ms var(--ease)}
+.flist li,.lib li,.alist li,.qeps li{transition:background-color var(--fast) var(--ease)}
+.slabel span,.gapmark,.live{transition:color var(--fast) var(--ease)}
+/* The header stays within reach on a long map; a hairline appears once the page has moved. */
+@media (min-width:721px){
+  .top{position:sticky;top:0;z-index:15;background:var(--bg);margin:-12px -24px 12px;padding:12px 24px;border-bottom:1px solid transparent;transition:border-color var(--mid) var(--ease)}
+  .scrolled .top{border-bottom-color:var(--line)}
+}
+@media (max-width:720px){.skey{display:none}.searchbox input{padding-right:40px}}
+@media (pointer:coarse){.searchbox input{min-height:44px}.sopt{padding:12px 10px}}
+@view-transition{navigation:auto}
+::view-transition-old(root),::view-transition-new(root){animation-duration:140ms}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){animation:none!important}}
+.queue,#attention{scroll-margin-top:72px}
+
+/* Accent picker, loading bar, brand mark (12 Nov 2026). Each accent is measured as text on every surface:
+   light on #fafafa / #f2f2f3, dark on #161617 / #26262a.
+   indigo 6.0 / 5.6, 6.6 / 5.5 · blue 6.4 / 6.0, 8.4 / 7.0 · teal 5.2 / 4.9, 12.2 / 10.2 · green 6.0+ / 5.6+, 10.4 / 8.7
+   rose 6.0 / 5.6, 6.7 / 5.6 · violet 5.5 / 5.1, 6.7 / 5.5 · graphite 16.1 / 15.0, 15.5 / 12.9 */
+:root{--accent-soft:color-mix(in srgb,var(--accent) 12%,transparent)}
+:root[data-accent=blue]{--accent:#1d4ed8}
+:root[data-accent=teal]{--accent:#0f766e}
+:root[data-accent=green]{--accent:#116d36}
+:root[data-accent=rose]{--accent:#be123c}
+:root[data-accent=violet]{--accent:#7c3aed}
+:root[data-accent=graphite]{--accent:#1d1d1f}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme=light]){--accent-soft:color-mix(in srgb,var(--accent) 16%,transparent)}
+  :root:not([data-theme=light])[data-accent=blue]{--accent:#7cb3ff}
+  :root:not([data-theme=light])[data-accent=teal]{--accent:#5eead4}
+  :root:not([data-theme=light])[data-accent=green]{--accent:#4ade80}
+  :root:not([data-theme=light])[data-accent=rose]{--accent:#fb7185}
+  :root:not([data-theme=light])[data-accent=violet]{--accent:#a78bfa}
+  :root:not([data-theme=light])[data-accent=graphite]{--accent:#ededf0}
+}
+:root[data-theme=dark]{--accent-soft:color-mix(in srgb,var(--accent) 16%,transparent)}
+:root[data-theme=dark][data-accent=blue]{--accent:#7cb3ff}
+:root[data-theme=dark][data-accent=teal]{--accent:#5eead4}
+:root[data-theme=dark][data-accent=green]{--accent:#4ade80}
+:root[data-theme=dark][data-accent=rose]{--accent:#fb7185}
+:root[data-theme=dark][data-accent=violet]{--accent:#a78bfa}
+:root[data-theme=dark][data-accent=graphite]{--accent:#ededf0}
+/* in light mode a chosen accent must not be overridden by the dark tokens above when the system is dark but the page is set light */
+:root[data-theme=light][data-accent=blue]{--accent:#1d4ed8}
+:root[data-theme=light][data-accent=teal]{--accent:#0f766e}
+:root[data-theme=light][data-accent=green]{--accent:#116d36}
+:root[data-theme=light][data-accent=rose]{--accent:#be123c}
+:root[data-theme=light][data-accent=violet]{--accent:#7c3aed}
+:root[data-theme=light][data-accent=graphite]{--accent:#1d1d1f}
+
+.looks{position:relative;display:flex}
+.swatch{display:block;width:14px;height:14px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 1px var(--line)}
+.accents{position:absolute;right:0;top:calc(100% + 6px);z-index:40;display:flex;gap:4px;padding:6px;border-radius:12px;border:1px solid var(--line);background:var(--surface);box-shadow:0 12px 32px rgba(0,0,0,.14);animation:rise var(--fast) var(--ease) both}
+.accents button{all:unset;width:28px;height:28px;display:grid;place-items:center;border-radius:8px;cursor:pointer}
+.accents button:hover{background:var(--surface-2)}
+.accents button:focus-visible{outline:2px solid var(--accent)}
+.accents button[aria-checked=true]{box-shadow:inset 0 0 0 1.5px var(--text-2)}
+.accents [data-accent=indigo] .swatch{background:#4f46e5}.accents [data-accent=blue] .swatch{background:#1d4ed8}
+.accents [data-accent=teal] .swatch{background:#0f766e}.accents [data-accent=green] .swatch{background:#116d36}
+.accents [data-accent=rose] .swatch{background:#be123c}.accents [data-accent=violet] .swatch{background:#7c3aed}
+.accents [data-accent=graphite] .swatch{background:#55555a}
+@media (pointer:coarse){.accents button{width:40px;height:40px}}
+
+/* Loading bar: a short piece of the accent crossing the top edge while Sonarr or wcostream is being asked */
+.busy{position:fixed;left:0;right:0;top:0;height:2px;z-index:60;overflow:hidden;background:var(--accent-soft)}
+.busy i{position:absolute;top:0;bottom:0;left:0;width:32%;border-radius:2px;background:var(--accent);animation:cross 1.1s cubic-bezier(.45,.05,.3,.95) infinite}
+@keyframes cross{from{transform:translateX(-100%)}to{transform:translateX(320%)}}
+@media (prefers-reduced-motion:reduce){.busy i{animation:none!important;width:100%;opacity:.5}}
+
+.brand{display:inline-flex;align-items:center;gap:8px}
+.brand img{border-radius:5px;display:block}
+
+/* Phone header (12 Nov 2026): mark, queue, accent and theme on the first row; screens next; search last */
+@media (max-width:720px){
+  .top .brand{order:0}.top #queuebtn,.top a.btn{order:0}.top .looks{order:0;margin-left:auto}.top #theme{order:0;margin-left:0}
+  .top .nav{order:1;flex-basis:100%}.top .lookup{order:2}.top .grow{display:none}
+  .lookup .btn{display:none}                      /* Enter or a suggestion does the search; the row is the box */
+}
+
+/* Dub calendar (12 Nov 2026) */
+.dubnote{margin-top:12px;color:var(--text-2);font-size:13px;max-width:760px}
+.dubnote a{color:var(--accent)}
+.cal{list-style:none;margin:0;padding:0}
+.cal li{display:grid;grid-template-columns:56px minmax(0,1.6fr) minmax(0,1fr) 110px;gap:8px 16px;align-items:center;padding:8px;margin:0 -8px;border-radius:8px;border-bottom:1px solid var(--line);transition:background-color var(--fast) var(--ease)}
+.cal li:hover{background:var(--surface-2)}
+.cal time{font-family:var(--mono);font-size:12px;color:var(--text-2);font-variant-numeric:tabular-nums}
+.cal .name{min-width:0}
+.cal .name b{font-weight:500;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cal .name span{display:block;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cal .ep{font-size:13px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-variant-numeric:tabular-nums}
+.cal .acts{display:flex;justify-content:flex-end}
+.cal li.est time,.cal li.est .name b{color:var(--text-2)}
+.tag.est{border-style:dashed}
+.week{font-size:12px;color:var(--muted);margin:32px 0 0;font-weight:400}
+.credit{margin-top:32px;font-size:12px;color:var(--muted)}
+.credit a{color:var(--text-2)}
+@media (max-width:720px){
+  .cal li{grid-template-columns:56px minmax(0,1fr)}
+  .cal .ep{grid-column:2}.cal .acts{grid-column:2;justify-content:flex-start}
+}
+/* Four screens in the nav (12 Nov 2026): on a phone the row tightens, and scrolls sideways inside itself if it must */
+@media (max-width:720px){
+  .top .nav{min-width:0;gap:0;overflow-x:auto;scrollbar-width:none}
+  .top .nav a{padding:6px 7px;font-size:13px;flex:none}
+}
+
+/* Settings dialog (12 Nov 2026) */
+dialog.settings{width:min(520px,calc(100vw - 32px));max-height:calc(100dvh - 32px);padding:0;border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--text);box-shadow:0 24px 64px rgba(0,0,0,.24)}
+dialog.settings[open]{animation:rise var(--fast) var(--ease) both}
+dialog.settings::backdrop{background:rgba(0,0,0,.36)}
+dialog.settings form{padding:24px;display:grid;gap:20px}
+dialog.settings h2{margin:0;font-size:18px;font-weight:500}
+dialog.settings fieldset{margin:0;padding:0;border:0;display:grid;gap:8px;min-width:0}
+dialog.settings legend{padding:0;margin-bottom:4px;font-size:12px;color:var(--muted)}
+.srow{display:flex;gap:8px 12px;align-items:center;flex-wrap:wrap}
+.srow label{font-size:14px;color:var(--text-2)}
+.srow select,.srow input{height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);font:inherit;min-width:0}
+.srow input[type=number]{width:96px}
+.srow input[type=password]{flex:1 1 220px}
+.srow select:focus-visible,.srow input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+dialog.settings .hint{margin:0}
+.serr{margin:0;color:var(--err);font-size:13px}
+.sacts{display:flex;gap:8px;justify-content:flex-end}
+@media (pointer:coarse){.srow select,.srow input{height:44px}}
+@media (prefers-reduced-motion:reduce){dialog.settings[open]{animation:none}}
+@media (max-width:720px){.top #settingsbtn{order:0;margin-left:0}}
+@media (max-width:720px){.top{column-gap:6px}}
+
+/* An episode wcostream does not list (12 Nov 2026) */
+.cell.nowco{border-style:dotted}
+.cal .wco{color:var(--muted);font-size:12px}
+.cal .btn{height:32px}
+@media (max-width:720px){.cal li{grid-template-columns:56px minmax(0,1fr)}}

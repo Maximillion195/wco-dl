@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Library gaps · wco-dl</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<script>try{var a=localStorage.getItem('wco-accent');if(a)document.documentElement.dataset.accent=a;var t=localStorage.getItem('wco-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="stylesheet" href="map.css">
+</head>
+<body>
+<div class="page">
+  <div class="top">
+    <a class="brand" href="/"><img src="favicon.svg" width="20" height="20" alt="">wco-dl</a>
+    <nav class="nav" aria-label="Screens"><a href="/map.html">Episode map</a><a href="/library.html" aria-current="page">Library gaps</a><a href="/map.html#attention">Needs you <span class="count" id="attncount"></span></a></nav>
+    <span class="grow"></span>
+    <a class="btn" href="/map.html#queue">Queue <span id="queuecount" class="count"></span></a>
+    <button class="btn btn-quiet" id="theme" type="button" aria-label="Switch light or dark">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9Z"/></svg>
+    </button>
+  </div>
+
+  <div id="status" class="status">Reading Sonarr and wcostream's catalogue. The first time can take a minute.</div>
+
+  <div id="lib" hidden>
+    <section class="show">
+      <div>
+        <h1>Library gaps</h1>
+        <div class="where">Linked shows with episodes missing or in another language only (a real count), and other animated series Sonarr says are missing episodes, matched to wcostream by name. Live action is left out: wcostream does not carry it.</div>
+        <div class="tally" id="tally"></div>
+      </div>
+      <button class="btn btn-primary" id="followall" type="button" hidden></button>
+    </section>
+
+    <div class="tools">
+      <div class="seg" role="group" aria-label="Drive" id="drive"></div>
+      <div class="seg" role="group" aria-label="State" id="kind"></div>
+      <span class="grow"></span>
+      <input id="filter" type="search" placeholder="Filter by name" aria-label="Filter series by name" autocomplete="off">
+    </div>
+    <p class="hint">Following a show links it and lets the overnight run (between <span data-night>01:00 and 07:00</span>, <span data-budget>120</span> episodes a night, shortest lists first) fill its gaps. Nothing downloads when you press Follow.</p>
+    <div id="rows"></div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<script src="ui.js"></script>
+<script src="library.js"></script>
+</body>
+</html>
