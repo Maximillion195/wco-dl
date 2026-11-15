@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- "The wink" (12 Nov 2026): a face made of two episode squares; one is in the library, the other is the dashed
+       "missing" square from the map, shut like a wink. Drawn for this app; nobody else's mark. -->
+  <style>
+    .tile{fill:#1d1d1f}.have{fill:#fafafa}.gap{fill:none;stroke:#8b93f8;stroke-width:2.4;stroke-linecap:round}
+    .smile{fill:none;stroke:#fafafa;stroke-width:2.4;stroke-linecap:round}
+    @media (prefers-color-scheme:dark){.tile{fill:#ededf0}.have{fill:#161617}.gap{stroke:#4f46e5}.smile{stroke:#161617}}
+  </style>
+  <rect class="tile" width="32" height="32" rx="7"/>
+  <rect class="have" x="6.5" y="8" width="7.5" height="7.5" rx="1.8"/>
+  <path class="gap" d="M18.5 12.5h7"/>
+  <path class="smile" d="M10 21.5c1.6 2 3.6 3 6 3s4.4-1 6-3"/>
+</svg>

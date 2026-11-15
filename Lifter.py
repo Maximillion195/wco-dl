@@ -398,7 +398,13 @@ class Lifter(object):
             matching = links
 
         if len(matching) < 1:
-            matching.reverse()
+            # 12 Nov 2026: an empty list used to fall into the thread code and end as "list index out of range"
+            # three times, with nothing counted as failed. Say what happened instead.
+            print('[wco-dl] - No episode matches season {0} episode {1}: wcostream lists {2} episode(s) '
+                  'for this show, numbered differently or without this one.'.format(
+                      self.season, ep_range.split('-')[0], len(links)))
+            self._count('download_errors')
+            return
         if (self.threads != None and self.threads != 0):
             if (len(matching) == 1):
                 for item in matching:

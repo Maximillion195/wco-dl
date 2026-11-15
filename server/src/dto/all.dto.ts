@@ -18,7 +18,7 @@ export class CreateShow {
   @ApiProperty({ required: false, default: false, example: false })
   newest: boolean = false;
 
-  @ApiProperty({ required: false, default: '720', example: '720' })
+  @ApiProperty({ required: false, default: '1080', example: '1080' })
   quality?: string;
 
   @ApiProperty({ required: false, default: undefined, example: 'sub' })

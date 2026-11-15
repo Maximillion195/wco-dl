@@ -16,6 +16,7 @@
           Download anime, cartoons and movies from
           <a href="https://www.wcostream.tv/" target="_blank" rel="noopener">wcostream.tv</a>
         </p>
+        <p class="subtitle"><a href="/map.html">Episode map: fill gaps and swap in dubs for a show</a></p>
         <button
           id="theme-toggle"
           class="theme-toggle"
@@ -50,9 +51,8 @@
         <label id="batch-quality" class="batch-quality hidden">
           Quality
           <select id="batch-quality-select">
-            <option value="480">480p (SD)</option>
-            <option value="720" selected>720p (HD)</option>
-            <option value="1080">1080p (FHD)</option>
+            <option value="1080" selected>HD / FHD (best available)</option>
+            <option value="480">SD (480p)</option>
           </select>
         </label>
         <button id="batch-download-btn" class="btn btn-primary hidden" type="button"></button>
@@ -124,6 +124,7 @@
         <div class="modal-body">
           <p class="modal-link">
             <a id="modal-link" target="_blank" rel="noopener">Open on wcostream.tv</a>
+            · <a id="modal-map" class="series-only">Open in episode map (imports into Sonarr safely)</a>
           </p>
 
           <div class="series-only">
@@ -139,9 +140,8 @@
             <div class="form-group">
               <label for="quality-select">Quality</label>
               <select id="quality-select">
-                <option value="480">480p (SD)</option>
-                <option value="720" selected>720p (HD)</option>
-                <option value="1080">1080p (FHD)</option>
+                <option value="1080" selected>HD / FHD (best available)</option>
+                <option value="480">SD (480p)</option>
               </select>
             </div>
           </div>

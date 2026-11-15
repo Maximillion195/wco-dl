@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dub calendar · wco-dl</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<script>try{var a=localStorage.getItem('wco-accent');if(a)document.documentElement.dataset.accent=a;var t=localStorage.getItem('wco-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="stylesheet" href="map.css">
+</head>
+<body>
+<div class="page">
+  <div class="top">
+    <a class="brand" href="/"><img src="favicon.svg" width="20" height="20" alt="">wco-dl</a>
+    <nav class="nav" aria-label="Screens"><a href="/map.html">Episode map</a><a href="/library.html">Library gaps</a><a href="/calendar.html" aria-current="page">Dub calendar</a><a href="/map.html#attention">Needs you <span class="count" id="attncount"></span></a></nav>
+    <span class="grow"></span>
+    <a class="btn" href="/map.html#queue">Queue <span id="queuecount" class="count"></span></a>
+    <button class="btn btn-quiet" id="theme" type="button" aria-label="Switch light or dark">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9Z"/></svg>
+    </button>
+  </div>
+
+  <div id="status" class="status">Reading the dub timetable and Sonarr.</div>
+
+  <div id="cal" hidden>
+    <section class="show">
+      <div>
+        <h1>Dub calendar</h1>
+        <div class="where">English dub episodes on the way. A plain date is the one AnimeSchedule lists; a dashed "estimate" is ours: one episode a week after the last listed one, to the end of the season. A show with no dub announced has no date and is not here.</div>
+        <div class="tally" id="tally"></div>
+      </div>
+      <button class="btn" id="refresh" type="button">Refresh</button>
+    </section>
+
+    <div class="tools">
+      <div class="seg" role="group" aria-label="Which shows" id="scope"></div>
+      <div class="seg" role="group" aria-label="Which dates" id="dates"></div>
+      <span class="grow"></span>
+      <input id="filter" type="search" placeholder="Filter by name" aria-label="Filter shows by name" autocomplete="off">
+    </div>
+    <div id="rows"></div>
+    <p class="credit">Dub dates from <a href="https://animeschedule.net" rel="noopener" target="_blank">AnimeSchedule.net</a><span id="fetched"></span>. Times are UK time.</p>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<script src="ui.js"></script>
+<script src="calendar.js"></script>
+</body>
+</html>

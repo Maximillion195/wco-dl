@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Episode map · wco-dl</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<script>try{var a=localStorage.getItem('wco-accent');if(a)document.documentElement.dataset.accent=a;var t=localStorage.getItem('wco-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="stylesheet" href="map.css">
+</head>
+<body>
+<div class="page">
+  <div class="top">
+    <a class="brand" href="/"><img src="favicon.svg" width="20" height="20" alt="">wco-dl</a>
+    <nav class="nav" aria-label="Screens"><a href="/map.html" aria-current="page">Episode map</a><a href="/library.html">Library gaps</a><a href="/calendar.html">Dub calendar</a><a href="/map.html#attention">Needs you <span class="count" id="attncount"></span></a></nav>
+    <form class="lookup" id="lookup" role="search">
+      <div class="searchbox">
+        <svg class="ico sico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="url" role="combobox" aria-expanded="false" aria-controls="suggest" aria-autocomplete="list" aria-label="Search shows by name, or paste a wcostream show link"
+          placeholder="Search shows by name, or paste a wcostream link" autocomplete="off" spellcheck="false">
+        <kbd class="skey" id="skey" aria-hidden="true">/</kbd>
+        <button class="sclear" id="sclear" type="button" aria-label="Clear the search" hidden><svg class="ico" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+        <div class="suggest" id="suggest" role="listbox" aria-label="Suggestions" hidden></div>
+      </div>
+      <button class="btn" type="submit">Search</button>
+    </form>
+    <button class="btn" id="queuebtn" type="button" aria-expanded="false" aria-controls="queue">Queue <span id="queuecount" class="count"></span></button>
+    <button class="btn btn-quiet" id="theme" type="button" aria-label="Switch light or dark">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9Z"/></svg>
+    </button>
+  </div>
+
+  <div id="status" class="status" hidden></div>
+
+  <section class="queue" id="queue" hidden aria-label="Queue">
+    <div class="qhead"><h2>Queue</h2><span class="qbtns"><button class="btn" id="pausebtn" type="button" aria-pressed="false">Pause</button><button class="btn btn-quiet" id="queueclose" type="button">Close</button></span>
+      <span class="hint">What is downloading, then what waits in the order it will run, then finished runs. Retry resumes partial downloads.</span></div>
+    <div class="now" id="queuenow" hidden></div>
+    <div id="queuelist"></div>
+  </section>
+
+  <section class="picker" id="found" hidden>
+    <h2 id="foundhead">On wcostream</h2>
+    <p id="foundhint"></p>
+    <ul id="foundlist"></ul>
+  </section>
+
+  <section class="picker" id="picker" hidden>
+    <h2>Which show in Sonarr?</h2>
+    <p id="pickhint">Pick the series these episodes belong to. It is remembered for this link.</p>
+    <input id="search" placeholder="Search Sonarr" aria-label="Search Sonarr">
+    <ul id="picks"></ul>
+  </section>
+
+  <div id="show" hidden>
+    <section class="show">
+      <div>
+        <h1 id="title"></h1>
+        <div class="where">Sonarr: <code id="path"></code> · <button type="button" id="change">Change</button></div>
+        <div class="tally" id="tally"></div>
+        <div class="splitnote" id="split" hidden></div>
+        <div class="dubnote" id="dubnote" hidden></div>
+        <div class="dubnote" id="wconote" hidden></div>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <div class="seg" role="group" aria-label="Numbering" id="numbering">
+          <button type="button" data-v="false" aria-pressed="true">By season</button><button type="button" data-v="true" aria-pressed="false">Straight through</button>
+        </div>
+        <button class="btn follow" id="follow" type="button" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></svg><span id="followlabel">Follow overnight</span></button>
+        <div class="seg" role="group" aria-label="Audio" id="lang">
+          <button type="button" data-v="dub" aria-pressed="true">Dub</button><button type="button" data-v="sub" aria-pressed="false">Sub</button>
+        </div>
+      </div>
+    </section>
+
+    <div id="run" class="run" hidden></div>
+
+    <div class="tools">
+      <div class="legend">
+        <span><i class="sw"></i>In library, English</span>
+        <span><i class="sw jp"></i>Not in English</span>
+        <span><i class="sw"></i>? audio not labelled</span>
+        <span><i class="sw miss"></i>Missing</span>
+        <span><i class="sw sel"></i>Selected</span>
+        <span><i class="sw soon"></i>Not aired</span>
+      </div>
+      <span class="grow"></span>
+      <button class="btn" id="all" type="button">Select all that need work</button>
+    </div>
+    <details class="help" id="help"><summary>How to select, and what the squares say during a run</summary>
+      <p>Click or drag to select · <kbd>Shift</kbd> click for a range · click a season name for the whole season · arrows and <kbd>Space</kbd> with the keyboard · <kbd>Esc</kbd> clears</p>
+      <p>During a run a square shows <b>queue</b>, the download %, <b>import</b>, <b>done</b>, <b>Sonarr</b> (premium only on wcostream, so Sonarr searches for it), <b>check</b> (downloaded but not imported) or <b>fail</b>. Hover a square for the reason.</p>
+    </details>
+    <div id="map"></div>
+  </div>
+  <div class="home" id="empty">
+    <div class="now" id="now" hidden></div>
+    <section id="attention" hidden>
+      <div class="fhead"><h2>Needs you <span class="count" id="attnhead"></span></h2>
+        <span class="hint">The last attempt failed, the file was not imported, or the episode is premium-only on wcostream</span></div>
+      <ul class="alist" id="attnlist"></ul>
+    </section>
+    <div class="fhead" id="fhead" hidden><h2>Followed shows <span class="count" id="fcount"></span></h2>
+      <span class="hint">Their gaps and dub swaps fill overnight, between <span data-night>01:00 and 07:00</span> · <span id="fcounted"></span> <button class="linkbtn" id="recount" type="button">Recount</button></span><span class="grow"></span>
+      <div class="seg" role="group" aria-label="Which followed shows" id="fkind">
+        <button type="button" data-v="all" aria-pressed="true">All</button><button type="button" data-v="incomplete" aria-pressed="false">Incomplete <span class="count" id="fincomplete"></span></button>
+      </div>
+      <input id="ffilter" type="search" placeholder="Filter by name" aria-label="Filter followed shows" autocomplete="off" hidden></div>
+    <ul class="flist" id="followedlist"></ul>
+    <p class="empty" id="fnone" hidden></p>
+    <p class="hint foot"><a href="/index.html">The original downloader page</a></p>
+  </div>
+</div>
+
+<div class="tip" id="tip" role="tooltip"></div>
+
+<div class="bar" id="bar"><div class="in">
+  <div class="sum" id="sum" aria-live="polite"></div>
+  <button class="btn btn-quiet" id="clear" type="button">Clear</button>
+  <span class="grow"></span>
+  <label class="hint" for="q">Quality</label>
+  <select id="q"><option value="1080">HD / FHD</option><option value="480">SD</option></select>
+  <button class="btn btn-primary" id="go" type="button">
+    <svg viewBox="0 0 24 24"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg><span id="golabel">Download and import</span></button>
+</div></div>
+<div class="toast" id="toast" role="status"></div>
+<script src="ui.js"></script>
+<script src="map.js"></script>
+</body>
+</html>

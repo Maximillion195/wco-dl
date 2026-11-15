@@ -30,20 +30,22 @@ See [DOCKER.md](DOCKER.md) for detailed setup instructions.
 
 - **Web Interface**: Browse and download anime/cartoons with a modern web UI
 - **Command Line**: Download specific episodes or entire series via CLI
-- **Multiple Quality Options**: Supports 480p, 720p, and 1080p downloads for whole shows (single episodes, movies and OVAs downloaded through the web UI or API are 480p only; see [Web API](#web-api))
+- **Quality Options**: HD / FHD (the best HD stream offered) or SD for whole shows (single episodes, movies and OVAs downloaded through the web UI or API are 480p only; see [Web API](#web-api))
 - **Resume Downloads**: Automatically resumes interrupted downloads
 - **Parallel Downloads**: Download multiple episodes simultaneously
 - **Sonarr Integration**: Automatically import downloaded content to your media library
 - **Content Types**: Download dubbed anime, subbed anime, cartoons, movies, and OVAs
 - **Batch Downloads**: Select several shows in the web UI and download them together
 - **Webhook Notifications**: Get a POST request when a download finishes
+- **Episode Map** (with Sonarr): see which episodes of a show you have, which are missing and which wcostream has, then download and import the ones you pick; follow a show and its gaps are filled overnight
+- **Dub Calendar**: upcoming English dub episodes from [AnimeSchedule](https://animeschedule.net), matched to your Sonarr shows
 
 ## What's New
 
 - **Modern Web UI**: Tabs for Dubbed Anime, Subbed Anime, Cartoons, Movies and OVAs, real-time search with match highlighting, and a dark/light theme toggle that remembers your choice.
 - **Cloudflare Handling**: [cloudscraper](https://github.com/VeNoMouS/cloudscraper) replaces the unmaintained `cfscrape`. When cloudscraper can't solve a challenge, requests are retried through [Byparr](https://github.com/ThePhaseless/Byparr), which the Docker setup runs for you.
 - **Video Extraction Fix**: Video links are now requested with the same User-Agent that fetched them, including after a Byparr fallback. WCO rejects mismatched User-Agents with a `404`, which used to break downloads.
-- **Quality Selection**: Choose 480p, 720p, or 1080p from the web UI or with the `quality` API parameter (default `720`). `480` downloads the SD stream; `720` and `1080` both request the best HD stream WCO offers for that episode.
+- **Quality Selection**: Choose HD / FHD or SD from the web UI, or pass `quality` to the API (default `1080`). `480` downloads the SD stream; any other value requests the best HD stream WCO offers for that episode, so `720` and `1080` fetch the same file.
 - **Batch Downloads**: The web UI lets you select multiple shows and download them together. The API equivalent is `POST /download-batch` (up to 50 names per request). Every name is validated before any download starts, so one typo won't leave half a batch running.
 - **Webhook Notifications**: Register webhook URLs that receive a POST when a download finishes, whether it completed, failed, or timed out. Webhooks can be managed through the API or preset with the `WEBHOOK_URLS` environment variable (comma-separated). Up to 20 can be registered.
 - **Enhanced Download Queue**: The web UI queue shows a status icon per download (running, completed, failed, timed out), progress details, and the error message when something goes wrong.
@@ -51,6 +53,24 @@ See [DOCKER.md](DOCKER.md) for detailed setup instructions.
 - **Bug Fixes**:
   - The Python downloader now exits with code `1` when a download fails (invalid link, no episodes found, or an episode that couldn't be downloaded), so the server and scripts can detect failures. Episodes only available to WCO Premium users are skipped without failing the run; the summary line reports both counts, e.g. `10 episode(s) downloaded, 2 premium-only skipped`.
   - Titles that start with a digit, such as `1-happy-family-usa`, are now recognised.
+
+## Episode Map and Overnight Gap Filler
+
+Needs Sonarr (`SONARR_URL` and `SONARR_API_KEY`). Open `/map.html`, or **Open in episode map** on a show in the main page.
+
+- **The map**: paste a wcostream link or search; the show is matched to its Sonarr series and drawn season by season. Each episode shows whether you have it, whether it is missing, whether wcostream has it (dotted when it does not), and whether your copy is subbed while a dub exists. Pick episodes by click, shift-click, drag, a whole season or the keyboard.
+- **Download and import**: picked episodes are queued and fetched one at a time into a staging folder under `OUTPUT_BASE`, then imported into Sonarr with a manual import for exactly those episodes, so Sonarr never guesses. A file whose name does not match the episode asked for is kept in staging for a look, not imported. Swapping a subbed file for the dub checks the new file's audio with `ffprobe` (in the Docker image) first. Premium-only episodes are handed to Sonarr to search for.
+- **Which link is which episode**: many cartoons on wcostream pack two story segments into one numbered episode, while Sonarr numbers each segment, so "episode 2" on the site is often episodes 3 and 4 in Sonarr. Episodes are matched by title: a link whose title is two Sonarr episodes is downloaded once and imported as a multi-episode file. A number is only trusted when the titles agree or there is no title to compare, and a number that points at a different episode is refused before downloading. Shows numbered straight through on the site (no seasons) are supported; the map offers to switch when the other numbering finds more episodes.
+- **Follow a show**: its missing episodes are planned every night inside a window (default 01:00 to 07:00, container time zone from `TZ`) up to a nightly limit, shows with the fewest gaps first. An episode not out yet on the site is retried 1, 3, 7 and 14 days after it aired, then handed to Sonarr. When the video host refuses several episodes in a row, the show's run is parked until the next night.
+- **Needs you**: episodes kept for a look, failures and refused shows are listed on `/map.html#attention`; `NOTIFY_URL` can receive a short summary when the night's runs finish.
+- **Library gaps** (`/library.html`): every animated Sonarr series with missing episodes, matched to the wcostream shows of the same name, so many shows can be linked and followed from one screen.
+- **Settings**: the cog next to the theme button sets the night window, the nightly limit and the default quality. They are kept in the config volume (`/app/config`) with the queue's history, so a restart resumes where it left off.
+
+### Dub calendar
+
+`/calendar.html` lists English dub episodes airing in the next six weeks from AnimeSchedule.net's dub timetable, matched to your Sonarr series by name, plus estimated dates for the rest of each season (weekly, marked as estimates). Each row says whether the show is in Sonarr, followed, and how far wcostream has got, with buttons to follow it or add it to Sonarr. The episode map shows a show's next dub dates too.
+
+It needs a free AnimeSchedule application token: make an application in your animeschedule.net account settings (API tab) and paste the token in Settings. It is stored in the config volume and never sent back to the browser. The timetable is cached for 12 hours; AnimeSchedule's terms ask for personal use and a visible credit link, which the page shows.
 
 ## Web API
 
@@ -180,6 +200,10 @@ The server is configured through environment variables, set in `.env` when using
 | `CORS_ORIGIN` | Origin allowed to call the API from a browser | `http://localhost:3000` |
 | `BYPARR_URL` | Byparr instance used for Cloudflare bypass (also read by the Python CLI) | `http://localhost:8191`; `http://byparr:8191` in Docker |
 | `SONARR_URL` / `SONARR_API_KEY` | Sonarr import after each download; leave the key empty to disable | Unset |
+| `SONARR_IMPORT_BASE` | Where Sonarr sees `OUTPUT_BASE`, when Sonarr runs outside this container | Unset (same path) |
+| `TZ` | Time zone for the overnight window | `UTC` |
+| `NOTIFY_URL` / `NOTIFY_TOKEN` | POST a summary `{source, title, body, url}` after the night's runs; the token goes in `x-notify-token` | Unset |
+| `PUBLIC_URL` | This app's address as you open it, for the link in that summary | Unset |
 | `DOWNLOAD_IDLE_TIMEOUT_MS` | Kill a download that produces no output for this long | `210000` |
 | `WEBHOOK_URLS` | Comma-separated webhook URLs registered at startup | Unset |
 | `WEBHOOK_ALLOW_INTERNAL` | Allow webhooks to loopback, link-local and private addresses | `false` |

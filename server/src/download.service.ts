@@ -207,7 +207,7 @@ export class DownloadService {
       'episode range',
     );
     const language = optionalParam(body.language, LANGUAGE_RE, 'language');
-    const quality = optionalParam(body.quality, QUALITY_RE, 'quality') ?? '720';
+    const quality = optionalParam(body.quality, QUALITY_RE, 'quality') ?? '1080';
     const newest = body.newest === true || String(body.newest) === 'true';
 
     const url = `${WCO_BASE_URL}/anime/${slug}${language ? `?lang=${language}` : ''}`;
@@ -420,8 +420,16 @@ export class DownloadService {
     }
   }
 
+  /** The folder as Sonarr sees it: OUTPUT_BASE swapped for SONARR_IMPORT_BASE when Sonarr runs elsewhere. */
+  private sonarrPath(folder: string, outputBase: string, importBase?: string): string {
+    if (!importBase || !folder.startsWith(outputBase)) return folder;
+    const rest = folder.slice(outputBase.length);
+    const sep = importBase.includes('\\') ? '\\' : '/';
+    return importBase.replace(/[\\/]+$/, '') + sep + rest.split(/[\\/]/).filter(Boolean).join(sep);
+  }
+
   private async triggerSonarrImport(folder: string): Promise<StepResult> {
-    const { isProd, sonarrUrl, sonarrApiKey } = this.config;
+    const { isProd, sonarrUrl, sonarrApiKey, sonarrImportBase, outputBase } = this.config;
     if (!isProd) {
       return { status: 'skipped', message: 'Only runs in production' };
     }
@@ -432,7 +440,7 @@ export class DownloadService {
     try {
       const { data } = await axios.post(
         `${sonarrUrl}/api/v3/command`,
-        { name: 'DownloadedEpisodesScan', path: folder },
+        { name: 'DownloadedEpisodesScan', path: this.sonarrPath(folder, outputBase, sonarrImportBase) },
         {
           headers: { 'X-Api-Key': sonarrApiKey },
           timeout: 15000,

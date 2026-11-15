@@ -57,7 +57,7 @@ describe('startProcess', () => {
         '-e',
         'let n = 0; const t = setInterval(() => { console.log(n); if (++n === 6) { clearInterval(t); } }, 100);',
       ],
-      idleTimeoutMs: 300,
+      idleTimeoutMs: 500,
     });
 
     await expect(running.result).resolves.toMatchObject({

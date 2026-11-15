@@ -68,7 +68,8 @@ const TYPE_LABELS = {
   ova: 'OVAs'
 };
 const MAX_RENDERED = 500;
-const DEFAULT_QUALITY = '720';
+// The downloader takes the best HD source for any quality but 480: FHD when offered, otherwise HD.
+const DEFAULT_QUALITY = '1080';
 // The server rejects batches larger than this.
 const MAX_BATCH_SIZE = 50;
 const LANGUAGES = {
@@ -435,6 +436,8 @@ function openModal(anime) {
   elements.modalLink.href = isEpisode
     ? `${WCO_BASE_URL}/${anime.path}`
     : `${WCO_BASE_URL}/anime/${anime.path}`;
+  const mapLink = document.getElementById('modal-map');
+  if (mapLink) mapLink.href = `/map.html?url=${encodeURIComponent(anime.path)}`;
   elements.modal.querySelectorAll('.series-only').forEach(el => el.classList.toggle('hidden', isEpisode));
   elements.modal.querySelectorAll('.episode-only').forEach(el => el.classList.toggle('hidden', !isEpisode));
 
@@ -626,7 +629,7 @@ function downloadDetail(job) {
 function downloadTags(job) {
   const tags = [];
   if (job.language) tags.push(job.language);
-  if (job.quality && job.quality !== DEFAULT_QUALITY) tags.push(`${job.quality}p`);
+  if (job.quality) tags.push(job.quality === '480' ? 'SD' : 'HD/FHD');
   return tags;
 }
 

@@ -163,7 +163,7 @@ describe('DownloadService', () => {
 
     expect(job.url).toBe('https://www.wcostream.tv/anime/bleach?lang=sub');
     expect(job.language).toBe('sub');
-    expect(job.quality).toBe('720');
+    expect(job.quality).toBe('1080');
     const finished = await waitForFinish(service, job);
     expect(JSON.parse(finished.log[0]).slice(0, 2)).toEqual([
       '-i',
