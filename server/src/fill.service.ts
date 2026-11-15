@@ -7,6 +7,7 @@ import {
   NotFoundException,
   OnApplicationBootstrap,
   Optional,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import axios from 'axios';
@@ -17,6 +18,7 @@ import * as path from 'path';
 import { promisify } from 'util';
 import { APP_CONFIG } from './app-config.provider';
 import { AppConfig } from './config';
+import { JsonFileStore } from './json-file-store';
 import { startProcess } from './process-runner';
 import {
   dubVerdict,
@@ -259,9 +261,7 @@ export class FillService implements OnApplicationBootstrap {
       try { counted.set(slug, countMap(await this.mapEpisodes(pref.seriesId))); }
       catch (err) { this.logger.warn(`Recount ${slug}: ${(err as Error).message}`); }
     }
-    const prefs = await this.prefs();   // read again: a follow made meanwhile must not be lost
-    for (const [slug, c] of counted) if (prefs[slug]) prefs[slug].counts = c;
-    await this.savePrefs(prefs);
+    await this.changePrefs((prefs) => { for (const [slug, c] of counted) if (prefs[slug]) prefs[slug].counts = c; });
     return { counted: counted.size };
   }
 
@@ -371,13 +371,21 @@ export class FillService implements OnApplicationBootstrap {
     return { added: true, series: { id: made.id, title: made.title, path: made.path } };
   }
 
-  private async prefs(): Promise<ShowPrefs> {
-    try { return JSON.parse(await fs.readFile(this.prefsFile, 'utf8')); } catch { return {}; }
+  // The show links and follows. Every change goes through changePrefs: it is applied to a fresh read, one change at
+  // a time, and the file is replaced in one step. Before (15 Nov 2026) a long job such as the nightly plan wrote back
+  // the copy it had read when it started, wiping a follow made meanwhile, and a file cut short by a restart read as
+  // "no shows" and was then saved that way. Keep slow work (Sonarr, wcostream) outside the change.
+  private prefsStore?: JsonFileStore<ShowPrefs>;
+  private get store() {
+    return (this.prefsStore ??= new JsonFileStore<ShowPrefs>(this.prefsFile, () => ({}), (m) => this.logger.warn(m)));
   }
 
-  private async savePrefs(p: ShowPrefs) {
-    await fs.mkdir(this.configDir, { recursive: true });
-    await fs.writeFile(this.prefsFile, JSON.stringify(p, null, 1));
+  private async prefs(): Promise<ShowPrefs> {
+    try { return await this.store.read(); } catch (e) { throw new ServiceUnavailableException((e as Error).message); }
+  }
+
+  private async changePrefs(change: (p: ShowPrefs) => void): Promise<ShowPrefs> {
+    try { return await this.store.update(change); } catch (e) { throw new ServiceUnavailableException((e as Error).message); }
   }
 
   // ---------- Look-up ----------
@@ -396,15 +404,16 @@ export class FillService implements OnApplicationBootstrap {
     const series = all.find((s) => s.id === seriesId) ?? (await this.sonarr('get', `series/${seriesId}`));
     let absolute = prefs[parsed.slug]?.absolute ?? false;
     if (absoluteParam !== undefined) absolute = absoluteParam === 'true';
-    if (seriesIdParam || absoluteParam !== undefined || !prefs[parsed.slug]) {
-      prefs[parsed.slug] = { ...prefs[parsed.slug], seriesId, absolute, title: series.title };
-      await this.savePrefs(prefs);
+    const slug = parsed.slug;
+    let pref = prefs[slug];
+    if (seriesIdParam || absoluteParam !== undefined || !pref) {
+      const link = { seriesId, absolute, title: series.title as string };
+      pref = (await this.changePrefs((p) => { p[slug] = { ...p[slug], ...link }; }))[slug];
     }
-    const pref = prefs[parsed.slug];
     const episodes = await this.mapEpisodes(seriesId);
     if (pref?.follow) {                 // keep the home list's counts fresh for a show that was just looked at
-      const fresh = await this.prefs();
-      if (fresh[parsed.slug]) { fresh[parsed.slug].counts = countMap(episodes); await this.savePrefs(fresh); }
+      const counts = countMap(episodes);
+      await this.changePrefs((p) => { if (p[slug]) p[slug].counts = counts; });
     }
     return {
       slug: parsed.slug, language: parsed.language, series: brief(series), absolute,
@@ -775,11 +784,11 @@ export class FillService implements OnApplicationBootstrap {
     try { slug = parseShowLink(String(body?.slug ?? '')).slug; } catch (e) { throw new BadRequestException((e as Error).message); }
     const seriesId = Number(body?.seriesId);
     if (!seriesId) throw new BadRequestException('Look the show up first');
-    const prefs = await this.prefs();
     const series = await this.sonarr('get', `series/${seriesId}`);
-    prefs[slug] = { ...prefs[slug], seriesId, title: series.title, follow: !!body.follow,
-      language: body.language === 'sub' ? 'sub' : 'dub', absolute: body.absolute ?? prefs[slug]?.absolute ?? false };
-    await this.savePrefs(prefs);
+    const prefs = await this.changePrefs((p) => {
+      p[slug] = { ...p[slug], seriesId, title: series.title, follow: !!body.follow,
+        language: body.language === 'sub' ? 'sub' : 'dub', absolute: body.absolute ?? p[slug]?.absolute ?? false };
+    });
     return { slug, ...prefs[slug] };
   }
 
@@ -787,22 +796,23 @@ export class FillService implements OnApplicationBootstrap {
   async setLinks(body: { items?: { slug?: string; seriesId?: number; follow?: boolean; language?: string }[] }) {
     const items = Array.isArray(body?.items) ? body.items.slice(0, 2000) : [];
     if (!items.length) throw new BadRequestException('Nothing to link');
-    const [all, prefs] = await Promise.all([this.allSeries(), this.prefs()]);
+    const all = await this.allSeries();
     const linked: string[] = [];
     const skipped: { slug: string; why: string }[] = [];
-    for (const it of items) {
-      let slug: string;
-      try { slug = parseShowLink(String(it?.slug ?? '')).slug; } catch { skipped.push({ slug: String(it?.slug ?? ''), why: 'not a show link' }); continue; }
-      const series = all.find((s) => s.id === Number(it.seriesId));
-      if (!series) { skipped.push({ slug, why: 'that series is not in Sonarr' }); continue; }
-      const had = prefs[slug];
-      if (had && had.seriesId !== series.id) { skipped.push({ slug, why: 'already linked to another series' }); continue; }
-      prefs[slug] = { ...had, seriesId: series.id, title: series.title, absolute: had?.absolute ?? false,
-        follow: it.follow === undefined ? !!had?.follow : !!it.follow,
-        language: it.language === 'sub' ? 'sub' : it.language === 'dub' ? 'dub' : had?.language ?? 'dub' };
-      linked.push(slug);
-    }
-    await this.savePrefs(prefs);
+    await this.changePrefs((prefs) => {
+      for (const it of items) {
+        let slug: string;
+        try { slug = parseShowLink(String(it?.slug ?? '')).slug; } catch { skipped.push({ slug: String(it?.slug ?? ''), why: 'not a show link' }); continue; }
+        const series = all.find((s) => s.id === Number(it.seriesId));
+        if (!series) { skipped.push({ slug, why: 'that series is not in Sonarr' }); continue; }
+        const had = prefs[slug];
+        if (had && had.seriesId !== series.id) { skipped.push({ slug, why: 'already linked to another series' }); continue; }
+        prefs[slug] = { ...had, seriesId: series.id, title: series.title, absolute: had?.absolute ?? false,
+          follow: it.follow === undefined ? !!had?.follow : !!it.follow,
+          language: it.language === 'sub' ? 'sub' : it.language === 'dub' ? 'dub' : had?.language ?? 'dub' };
+        linked.push(slug);
+      }
+    });
     return { linked: linked.length, skipped };
   }
 
@@ -861,8 +871,13 @@ export class FillService implements OnApplicationBootstrap {
   @Cron('5 * * * *')
   async nightlyTick() { if (new Date().getHours() === NIGHT.from) await this.nightlyPlan(); }
 
-  /** Queue what is due for each followed show. The runs start inside the night window. */
-  async nightlyPlan() {
+  private planning?: Promise<void>;
+  /** Queue what is due for each followed show. The runs start inside the night window. One plan at a time: a second call joins the one running. */
+  nightlyPlan(): Promise<void> {
+    return (this.planning ??= this.plan().finally(() => { this.planning = undefined; }));
+  }
+
+  private async plan() {
     const prefs = await this.prefs();
     const busy = this.activeIds();
     let budget = SETTINGS.nightBudget;
@@ -909,7 +924,18 @@ export class FillService implements OnApplicationBootstrap {
         this.logger.warn(`Nightly plan for ${slug}: ${(err as Error).message}`);
       }
     }
-    await this.savePrefs(prefs);
+    // Only what the plan worked out is written back, onto a fresh read: a follow or link made while it ran stays.
+    const planned = Object.entries(prefs).filter(([, p]) => p.follow);
+    await this.changePrefs((fresh) => {
+      for (const [slug, mine] of planned) {
+        const now = fresh[slug];
+        if (!now || now.seriesId !== mine.seriesId) continue;
+        if (mine.counts) now.counts = mine.counts;
+        if (mine.tries) now.tries = mine.tries;
+        if (mine.lastPlanned) now.lastPlanned = mine.lastPlanned;
+        if (mine.unlisted) now.unlisted = mine.unlisted; else delete now.unlisted;
+      }
+    });
     void this.pump();
   }
 
@@ -951,12 +977,11 @@ export class FillService implements OnApplicationBootstrap {
               const map = await this.mapEpisodes(pref.seriesId);
               const work = new Set(map.filter((e) => e.st === 'missing' || (e.st === 'undub' && pref.language !== 'sub')).map((e) => e.id));
               const listing = work.size ? await this.wco!.listing(slug, pref.language ?? 'dub') : undefined;
-              const fresh = await this.prefs();      // read again: a follow made meanwhile must not be lost
-              if (fresh[slug]) {
+              await this.changePrefs((fresh) => {
+                if (!fresh[slug]) return;
                 if (listing) fresh[slug].numbering = { ...numberingFit(listing, map, work, !!fresh[slug].absolute), at: new Date().toISOString() };
                 else if (!work.size) delete fresh[slug].numbering;
-                await this.savePrefs(fresh);
-              }
+              });
             }
           } catch (err) { this.logger.warn(`Numbering check for ${slug}: ${(err as Error).message}`); }
           this.scan.done++;

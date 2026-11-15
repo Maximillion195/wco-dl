@@ -392,3 +392,65 @@ describe('failure messages', () => {
     expect(failureReason(out)).toBe('Not downloaded: Could not find a video for x-episode-10: Embed player returned HTTP 503: Servers Busy');
   });
 });
+
+describe('show links and follows', () => {
+  let dir: string;
+  let prefsFile: string;
+  let gate: Promise<void> | undefined;
+  let planAsked: () => void;
+  const config = () => ({ sonarrUrl: 'http://sonarr', sonarrApiKey: 'k', configDir: dir, outputBase: path.join(dir, 'out') } as unknown as AppConfig);
+  const saved = async () => JSON.parse(await fs.readFile(prefsFile, 'utf8'));
+
+  beforeEach(async () => {
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), 'prefs-'));
+    prefsFile = path.join(dir, 'show-prefs.json');
+    gate = undefined;
+    planAsked = () => undefined;
+    jest.spyOn(axios, 'request').mockImplementation(async (req: any) => {
+      const url = String(req.url).replace(/^.*\/api\/v3\//, '');
+      if (url.startsWith('episode?seriesId')) { planAsked(); await gate; return { data: [] }; }
+      if (url.startsWith('series/')) return { data: { id: Number(url.split('/')[1]), title: 'Show ' + url.split('/')[1] } };
+      return { data: [] };
+    });
+  });
+  afterEach(async () => { jest.restoreAllMocks(); await fs.rm(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 }); });
+
+  it('keeps a follow made while the nightly plan is running', async () => {
+    const svc = new FillService(config());
+    await svc.setFollow({ slug: 'first-show', seriesId: 1, follow: true });
+    let release!: () => void;
+    gate = new Promise<void>((ok) => { release = ok; });
+    const asked = new Promise<void>((ok) => { planAsked = ok; });
+    const plan = svc.nightlyPlan();
+    await asked;                          // the plan has read the list and is waiting for Sonarr
+    await svc.setFollow({ slug: 'second-show', seriesId: 2, follow: true });
+    release();
+    await plan;
+    const now = await saved();
+    expect(now['second-show']?.follow).toBe(true);
+    expect(now['first-show'].counts).toEqual(expect.objectContaining({ missing: 0, undub: 0 }));   // the plan's own work is kept too
+  });
+
+  it('runs one plan at a time: a second call joins the first', async () => {
+    const svc = new FillService(config());
+    await svc.setFollow({ slug: 'first-show', seriesId: 1, follow: true });
+    const calls = () => (axios.request as jest.Mock).mock.calls.filter(([r]) => String(r.url).includes('episode?seriesId')).length;
+    const before = calls();
+    await Promise.all([svc.nightlyPlan(), svc.nightlyPlan()]);
+    expect(calls() - before).toBe(1);
+  });
+
+  it('does not take a list cut short by a restart for "no shows"', async () => {
+    const svc = new FillService(config());
+    await svc.setFollow({ slug: 'first-show', seriesId: 1, follow: true });
+    await svc.setFollow({ slug: 'second-show', seriesId: 2, follow: true });   // the copy from before now holds first-show
+    await fs.writeFile(prefsFile, '{"first-show": {"seriesId"');
+    expect((await svc.followed()).map((f) => f.slug)).toEqual(['first-show']);
+    // With no copy to fall back on, the screens say so and nothing is written over the file.
+    await fs.rm(prefsFile + '.bak');
+    await fs.writeFile(prefsFile, '{"first-show": {"seriesId"');
+    await expect(svc.followed()).rejects.toThrow(/cannot be read/);
+    await expect(svc.setFollow({ slug: 'third-show', seriesId: 3, follow: true })).rejects.toThrow(/Nothing was changed/);
+    expect(await fs.readFile(prefsFile, 'utf8')).toBe('{"first-show": {"seriesId"');
+  });
+});
