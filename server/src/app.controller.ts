@@ -28,6 +28,7 @@ import {
 } from './dto/all.dto';
 import { JsonRequestGuard } from './json-request.guard';
 import { FillJob, FillService } from './fill.service';
+import { DubCalendarService } from './dub-calendar.service';
 import { CatalogueItem, searchCatalogue } from './fill.util';
 
 @Controller()
@@ -36,6 +37,7 @@ export class AppController {
     private readonly appService: AppService,
     private readonly downloadService: DownloadService,
     private readonly fillService: FillService,
+    private readonly dubCalendar: DubCalendarService,
   ) {}
 
   // ---- Episode map (11 Nov 2026): look a show up from its wco link, then fill ticked episodes ----
@@ -201,16 +203,31 @@ export class AppController {
     return this.fillService.recount();
   }
 
-  // Settings screen (12 Nov 2026): the overnight window, the nightly limit and the default quality.
+  // Settings screen (12 Nov 2026). The AnimeSchedule token goes in and never comes back out: only "saved or not".
   @Get('settings')
-  settings() {
-    return this.fillService.getSettings();
+  async settings() {
+    return { ...this.fillService.getSettings(), hasDubToken: await this.dubCalendar.hasToken() };
   }
 
   @Post('settings')
   @UseGuards(JsonRequestGuard)
   async saveSettings(@Body() body: any) {
-    return this.fillService.setSettings(body);
+    if (body?.dubToken) await this.dubCalendar.setToken(body.dubToken);
+    return { ...(await this.fillService.setSettings(body)), hasDubToken: await this.dubCalendar.hasToken() };
+  }
+
+  // Dub calendar (12 Nov 2026): English dub air dates from AnimeSchedule.net, matched to Sonarr.
+  @Get('dub-calendar')
+  async dubCalendarRows(@Query('refresh') refresh?: string) {
+    const c = await this.dubCalendar.calendar(refresh === '1');
+    if (c.needsToken) return c;
+    const { items } = await this.catalogue();
+    return { ...c, rows: await this.fillService.calendarInfo(c.rows, items) };
+  }
+
+  @Get('dub-calendar/series/:id')
+  dubCalendarSeries(@Param('id') id: string) {
+    return this.dubCalendar.forSeries(Number(id));
   }
 
   @Get('get-website')

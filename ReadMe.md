@@ -38,6 +38,7 @@ See [DOCKER.md](DOCKER.md) for detailed setup instructions.
 - **Batch Downloads**: Select several shows in the web UI and download them together
 - **Webhook Notifications**: Get a POST request when a download finishes
 - **Episode Map** (with Sonarr): see which episodes of a show you have, which are missing and which wcostream has, then download and import the ones you pick; follow a show and its gaps are filled overnight
+- **Dub Calendar**: upcoming English dub episodes from [AnimeSchedule](https://animeschedule.net), matched to your Sonarr shows
 
 ## What's New
 
@@ -64,6 +65,12 @@ Needs Sonarr (`SONARR_URL` and `SONARR_API_KEY`). Open `/map.html`, or **Open in
 - **Needs you**: episodes kept for a look, failures and refused shows are listed on `/map.html#attention`; `NOTIFY_URL` can receive a short summary when the night's runs finish.
 - **Library gaps** (`/library.html`): every animated Sonarr series with missing episodes, matched to the wcostream shows of the same name, so many shows can be linked and followed from one screen.
 - **Settings**: the cog next to the theme button sets the night window, the nightly limit and the default quality. They are kept in the config volume (`/app/config`) with the queue's history, so a restart resumes where it left off.
+
+### Dub calendar
+
+`/calendar.html` lists English dub episodes airing in the next six weeks from AnimeSchedule.net's dub timetable, matched to your Sonarr series by name, plus estimated dates for the rest of each season (weekly, marked as estimates). Each row says whether the show is in Sonarr, followed, and how far wcostream has got, with buttons to follow it or add it to Sonarr. The episode map shows a show's next dub dates too.
+
+It needs a free AnimeSchedule application token: make an application in your animeschedule.net account settings (API tab) and paste the token in Settings. It is stored in the config volume and never sent back to the browser. The timetable is cached for 12 hours; AnimeSchedule's terms ask for personal use and a visible credit link, which the page shows.
 
 ## Web API
 

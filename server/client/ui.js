@@ -34,7 +34,7 @@
 
   // ---------- Settings (12 Nov 2026): the cog beside the light and dark button ----------
   const hh = (h) => String(h).padStart(2, '0') + ':00';
-  let settings = { nightFrom: 1, nightTo: 7, nightBudget: 120, quality: '1080' };
+  let settings = { nightFrom: 1, nightTo: 7, nightBudget: 120, quality: '1080', hasDubToken: false };
   window.wcoNight = () => `${hh(settings.nightFrom)} and ${hh(settings.nightTo)}`;
   function showSettings() {
     document.querySelectorAll('[data-night]').forEach((e) => { e.textContent = window.wcoNight(); });
@@ -63,6 +63,10 @@
         <div class="srow"><label for="s-quality">Quality</label><select id="s-quality"><option value="1080">HD / FHD (best available)</option><option value="480">SD (480p)</option></select></div>
         <p class="hint">Used by overnight runs and offered first on the map. A refused HD file is tried once more in SD either way.</p>
       </fieldset>
+      <fieldset><legend>Dub calendar</legend>
+        <div class="srow"><label for="s-token">AnimeSchedule token</label><input id="s-token" type="password" autocomplete="off" spellcheck="false"></div>
+        <p class="hint" id="s-tokenhint"></p>
+      </fieldset>
       <p class="serr" id="s-err" role="alert" hidden></p>
       <div class="sacts"><button class="btn" type="button" id="s-cancel">Cancel</button><button class="btn btn-primary" type="submit" id="s-save">Save</button></div>
     </form>`;
@@ -71,6 +75,8 @@
     cog.onclick = async () => {
       await loaded;
       f('s-from').value = settings.nightFrom; f('s-to').value = settings.nightTo; f('s-budget').value = settings.nightBudget; f('s-quality').value = settings.quality;
+      f('s-token').value = ''; f('s-token').placeholder = settings.hasDubToken ? 'Saved. Type a new one to replace it' : 'Paste the token';
+      f('s-tokenhint').textContent = settings.hasDubToken ? 'A token is saved. It is never shown again.' : 'From your animeschedule.net account settings, API tab. Without it the dub calendar stays empty.';
       f('s-err').hidden = true;
       dlg.showModal();
     };
@@ -85,10 +91,13 @@
       f('s-save').disabled = true;
       try {
         const body = { nightFrom: Number(f('s-from').value), nightTo: Number(f('s-to').value), nightBudget: n, quality: f('s-quality').value };
+        const token = f('s-token').value.trim();
+        if (token) body.dubToken = token;
         const r = await fetch('/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         const d = await r.json().catch(() => ({}));
         if (!r.ok) return err(d.message ? [].concat(d.message).join('; ') : `The server answered ${r.status}`);
         settings = { ...settings, ...d }; showSettings(); dlg.close();
+        if (token && /calendar\.html$/.test(location.pathname)) location.reload();
       } catch (e) { err(`Not saved: ${e.message}`); } finally { f('s-save').disabled = false; }
     });
   }
